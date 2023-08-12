@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width,initial-scale=1" name="viewport" />
+    <link href="/css/index.css" media="all" rel="stylesheet" type="text/css" />
+    <script src="/js/index.js" type="module"></script>
+    <title>Facecards</title>
+  </head>
+  <body>
+    {% for course, students in classes %}
+      <h1>{{course}}</h1>
+      <div class="faces">
+        {% for student in students %}
+          <img src="/images/{{student.personId}}.png"></img>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </body>
+</html>

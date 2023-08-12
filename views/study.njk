@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width,initial-scale=1" name="viewport" />
+    <link href="/css/study.css" media="all" rel="stylesheet" type="text/css" />
+    <script src="/js/study.js" type="module"></script>
+    <title>Facecards</title>
+  </head>
+  <body>
+    {% if period  %}
+      <h1>Period {{period}}</h1>
+    {% else %}
+      <h1>All students</h1>
+    {% endif %}
+    <div id="current">
+    </div>
+    <div id="cards">
+      {% for student in students %}
+        <div class="card">
+          <img src="/images/{{student.personId}}.png"></img>
+          <div class="back">
+            <p class="name">{{student.firstName}}</p>
+            <p>{{student.firstName}} {{student.lastName}}</p>
+            <p>{{student.grade}} / {{student.gender}}</p>
+            <p>{{student.course}} - Period {{student.period}}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div id="progress"></div>
+  </body>
+</html>

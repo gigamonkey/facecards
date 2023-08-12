@@ -1,0 +1,42 @@
+/* light reset */
+html {
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  width: 90%;
+  margin: 1in auto;
+  padding: 2em 2em 5em;
+  background: #eeeefa;
+  border-radius: 12px;
+}
+
+
+img {
+  width: 172px;
+  height: auto;
+}
+
+
+.back {
+  display: none;
+}
+
+h1 {
+  margin: 2em 0;
+}
+
+.faces {
+  display: grid;
+  grid-template-columns: repeat(8, 172px);
+  justify-content: center;
+  gap: 3px;
+}

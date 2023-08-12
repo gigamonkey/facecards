@@ -1,0 +1,54 @@
+html {
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-content:center;
+  width: calc(min(40em, 80%));
+  margin: 1in auto;
+  padding: 2em 2em 5em;
+  background: #eeeefa;
+  border-radius: 12px;
+  text-align: center;
+}
+
+
+img {
+  width: 172px;
+  height: auto;
+}
+
+.back {
+  display: none;
+}
+
+#cards {
+  display: none;
+}
+
+#current {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  margin-top: 1em;
+}
+
+#progress {
+  margin-top: 2em;
+}
+
+.back .name {
+  font-size: 1.5em;
+  font-weight: 400;
+}

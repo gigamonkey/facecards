@@ -33,16 +33,17 @@ app.get('/', async (req, res) => {
   res.render('index.njk', { classes });
 });
 
-app.get('/period/:p', async (req, res) => {
+app.get(['/learn/p/:p', '/review/p/:p'], async (req, res) => {
   const { p } = req.params;
-  res.render('study.njk', {
-    students: tsv.filter((r) => r.period === p),
-    period: p,
-  });
+  const which = req.path.split('/p/')[0].slice(1);
+  const students = tsv.filter((r) => r.period === p);
+  console.log(`Period: ${p}; Script: ${which}`);
+  res.render('study.njk', { students: students, period: p, script: which });
 });
 
-app.get('/all', async (req, res) => {
-  res.render('study.njk', { students: tsv });
+app.get(['/learn', '/review'], async (req, res) => {
+  const which = req.path.slice(1);
+  res.render('study.njk', { students: tsv, script: which });
 });
 
 const PORT = 8086;

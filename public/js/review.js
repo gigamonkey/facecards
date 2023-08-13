@@ -45,7 +45,7 @@ let current = null;
 let state = null;
 
 const start = () => {
-  state = new State([...cards].slice(0, 5));
+  state = new State(cards);
   console.log(`Deck is ${state.deck.length} cards`);
   next();
 }

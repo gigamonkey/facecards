@@ -23,10 +23,10 @@ const loadTSV = async (file, fields) => {
     text
       .split(/\r?\n/)
       .filter((line) => line)
-      .map((line) => line.split('\t'))
+      .map((line) => line.split('\t')),
   );
   const headers = fields || rows[0];
-  return rows.slice(1).map((row) => Object.fromEntries(headers.map((name, i) => [ name, row[i] ])));
+  return rows.slice(1).map((row) => Object.fromEntries(headers.map((name, i) => [name, row[i]])));
 };
 
 /*
@@ -34,8 +34,7 @@ const loadTSV = async (file, fields) => {
  */
 const dumpTSV = (objects) => {
   console.log(Object.keys(objects[0]).join('\t'));
-  objects.forEach(o => console.log(Object.values(o).join('\t')));
+  objects.forEach((o) => console.log(Object.values(o).join('\t')));
 };
-
 
 export { loadJSON, saveJSON, dumpJSON, loadTSV, dumpTSV };

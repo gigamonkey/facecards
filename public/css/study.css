@@ -14,7 +14,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-content:center;
+  align-content: center;
   width: calc(min(40em, 80%));
   margin: 1in auto;
   padding: 2em 2em 5em;
@@ -22,7 +22,6 @@ body {
   border-radius: 12px;
   text-align: center;
 }
-
 
 img {
   width: 172px;

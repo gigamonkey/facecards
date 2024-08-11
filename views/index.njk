@@ -8,13 +8,25 @@
     <title>Facecards</title>
   </head>
   <body>
-    {% for course, students in classes %}
-      <h1>{{course}}</h1>
-      <div class="faces">
-        {% for student in students %}
+    {% for period, class in classes %}
+      <h1>{{class.name}}</h1>
+    <p>
+      <a href="/learn/p/{{period}}">Learn</a> |
+      <a href="/review/p/{{period}}">Review</a>
+    </p>
+    <div class="faces">
+      {% for student in class.students | sort(attribute='firstName') %}
+        <div class="card">
           <img src="/images/{{student.personId}}.png"></img>
-        {% endfor %}
-      </div>
-    {% endfor %}
+          <div class="back">
+            <p class="name">{% if student.nickname %}{{student.nickname}}{% else %}{{student.firstName}}{% endif %}</p>
+            <p>{{student.firstName}} {{student.lastName}}</p>
+            <p>{{student.grade}} / {{student.gender}}</p>
+            <p>{{student.course}} - Period {{student.period}}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
   </body>
 </html>

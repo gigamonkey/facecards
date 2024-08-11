@@ -19,6 +19,11 @@ body {
   border-radius: 12px;
 }
 
+
+.card {
+  width: 172px;
+}
+
 img {
   width: 172px;
   height: auto;
@@ -26,6 +31,18 @@ img {
 
 .back {
   display: none;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+}
+
+.back p {
+  text-align: center;
+}
+
+.back .name {
+  font-size: 1.5em;
+  font-weight: 400;
 }
 
 h1 {
@@ -33,8 +50,8 @@ h1 {
 }
 
 .faces {
-  display: grid;
-  grid-template-columns: repeat(8, 172px);
-  justify-content: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 3px;
 }

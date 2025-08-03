@@ -8,12 +8,14 @@
     <title>Facecards</title>
   </head>
   <body>
-    {% for period, class in classes %}
-      <h1>{{class.name}}</h1>
-    <p>
-      <a href="/learn/p/{{period}}">Learn</a> |
-      <a href="/review/p/{{period}}">Review</a>
-    </p>
+    {% for slug, class in classes %}
+      <h1>{{class.course}} Period {{class.period}} ({{class.teacherLast}})</h1>
+
+      <div class="buttons">
+        <a href="/learn/p/{{slug}}">learn</a>
+        <a href="/review/p/{{slug}}">review</a>
+      </div>
+
     <div class="faces">
       {% for student in class.students | sort(attribute='firstName') %}
         <div class="card">

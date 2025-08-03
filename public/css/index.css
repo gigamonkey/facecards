@@ -1,6 +1,9 @@
+@import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap');
+
 /* light reset */
 html {
   box-sizing: border-box;
+  font-family: Jost;
 }
 
 *,
@@ -46,7 +49,7 @@ img {
 }
 
 h1 {
-  margin: 2em 0;
+  margin: 1em 0 0;
 }
 
 .faces {
@@ -54,4 +57,21 @@ h1 {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 3px;
+}
+
+
+div.buttons {
+
+  margin: 1em 0;
+
+  > a {
+    display: inline-block;
+    border: 1px solid grey;
+    text-decoration: none;
+    font-family: sans-serif;
+    border-radius: 6px;
+    padding: 3px;
+    background: #ddf;
+    font-weight: 300;
+  }
 }

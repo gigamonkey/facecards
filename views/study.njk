@@ -8,19 +8,26 @@
     <title>Facecards</title>
   </head>
   <body>
-    {% if period  %}
-      <h1>Period {{period}}</h1>
+    {% if name  %}
+      <h1>{{name}}</h1>
     {% else %}
       <h1>All students</h1>
     {% endif %}
     <div id="current">
     </div>
+    {# <pre>{{ students | dump(2) }}</pre> #}
     <div id="cards">
       {% for student in students %}
         <div class="card">
-          <img src="/images/{{student.personId}}.png"></img>
+          <img src="/images/{{student.studentNumber}}.jpg"></img>
           <div class="back">
-            <p class="name">{% if student.nickname %}{{student.nickname}}{% else %}{{student.firstName}}{% endif %}</p>
+            <p class="name">
+              {% if student.nickname %}
+                {{student.nickname}} ({{student.firstName}})
+              {% else %}
+                {{student.firstName}}
+              {% endif %}
+            </p>
             <p>{{student.firstName}} {{student.lastName}}</p>
             <p>{{student.grade}} / {{student.gender}}</p>
             <p>{{student.course}} - Period {{student.period}}</p>

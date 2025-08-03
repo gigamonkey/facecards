@@ -8,17 +8,28 @@ const app = express();
 
 const tsv = await loadTSV('students.tsv');
 
+const slugify = (s) => s.replace(/\s+/g, '-').replace(/[^-\w]/g, '').toLowerCase();
+
 const classes = {};
+const teachers = {};
+
 tsv.forEach((s) => {
-  if (!(s.period in classes)) {
-    console.log(`Making class for period ${s.period}`);
-    classes[s.period] = {
-      name: `${s.course} - Period ${s.period}`,
-      students: [],
-    }
+  const { course, period, teacher } = s;
+  const teacherLast = teacher.replace(/,.*$/, '');
+  const teacher_lc = teacher.toLowerCase();
+  const name = `${s.course} Period ${s.period} (${teacher})`;
+  const slug = slugify(`${s.course}-p-${s.period}-${teacher}`);
+  if (!(slug in classes)) {
+    classes[slug] = { course, period, name, teacherLast, teacher_lc, students: [] }
   }
-  classes[s.period].students.push(s);
+  if (!(teacher_lc in teachers)) {
+    teachers[teacher_lc] = { name: teacher, students: [] };
+  }
+  classes[slug].students.push(s);
+  teachers[teacher_lc].students.push(s);
 });
+
+console.log(teachers);
 
 app.set('json spaces', 2);
 
@@ -36,17 +47,21 @@ app.get('/', async (req, res) => {
   res.render('index.njk', { classes });
 });
 
-app.get(['/learn/p/:p', '/review/p/:p'], async (req, res) => {
-  const { p } = req.params;
-  const which = req.path.split('/p/')[0].slice(1);
-  const students = tsv.filter((r) => r.period === p);
-  console.log(`Period: ${p}; Script: ${which}`);
-  res.render('study.njk', { students: students, period: p, script: which });
+app.get(['/learn/p/:slug', '/review/p/:slug'], async (req, res) => {
+  const { slug } = req.params;
+  const script = req.path.split('/p/')[0].slice(1);
+  res.render('study.njk', { ...classes[slug], script });
+});
+
+app.get(['/learn/t/:teacher', '/review/t/:teacher'], async (req, res) => {
+  const { teacher } = req.params;
+  const script = req.path.split('/t/')[0].slice(1);
+  res.render('study.njk', { ...teachers[teacher], script });
 });
 
 app.get(['/learn', '/review'], async (req, res) => {
-  const which = req.path.slice(1);
-  res.render('study.njk', { students: tsv, script: which });
+  const script = req.path.slice(1);
+  res.render('study.njk', { students: tsv, script });
 });
 
 const PORT = 8086;

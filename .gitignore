@@ -1,5 +1,9 @@
 *.csv
+*.db
 *.tsv
+*.zip
 .junk
+images-*
 node_modules
+photos-*
 public/images/

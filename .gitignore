@@ -1,8 +1,11 @@
+!template.env
 *.csv
 *.db
+*.env
 *.tsv
 *.zip
 .junk
+client-secret.json
 images-*
 node_modules
 photos-*

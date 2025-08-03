@@ -18,7 +18,7 @@ pretty:
 	prettier -w *.js public/**/*.css
 
 dev:
-	npx nodemon --watch . -e js,mjs,json,njk,html,tsv index.js
+	npx nodemon --watch . -e env,js,mjs,json,njk,html,tsv index.js
 
 clean:
 	rm -f db.db

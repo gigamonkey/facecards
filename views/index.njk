@@ -17,7 +17,7 @@
     <div class="faces">
       {% for student in class.students | sort(attribute='firstName') %}
         <div class="card">
-          <img src="/images/{{student.personId}}.png"></img>
+          <img src="/images/{{student.studentNumber}}.jpg"></img>
           <div class="back">
             <p class="name">{% if student.nickname %}{{student.nickname}}{% else %}{{student.firstName}}{% endif %}</p>
             <p>{{student.firstName}} {{student.lastName}}</p>

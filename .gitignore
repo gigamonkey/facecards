@@ -1,3 +1,5 @@
-node_modules
+*.csv
 *.tsv
+.junk
+node_modules
 public/images/

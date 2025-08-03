@@ -1,0 +1,12 @@
+- Get personIDs (not studentIDs) of all students you want to make cards for.
+
+- Use ~/hacks/exfil to download all the images.
+
+- Copy them into raw/
+
+- Identify the students who have the standard anonymous image and look up their
+  initials and add lines to the add-initials.sh script to add them.
+
+- Use Makefile to convert them. This leaves new images in fixed/
+
+- Copy fixed/images to ../public/images/

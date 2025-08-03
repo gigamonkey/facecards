@@ -3,8 +3,11 @@
 
 SHELL := bash -O globstar
 
+db.db: schema.sql students-2025-26.csv
+	sqlite3 $@ < $<
+
 students.tsv: db.db
-	sqlite3 $< --header --tabs 'select personId, firstName, lastName, nickname, grade, gender, course, period from students' > $@
+	sqlite3 $< --header --tabs 'select studentNumber, personId, firstName, lastName, nickname, grade, gender, course, period from students' > $@
 
 pretty:
 	prettier -w *.js public/**/*.css

@@ -51,10 +51,10 @@ tsv.forEach((s) => {
   const teacherLast = teacherName.replace(/,.*$/, '');
   const teacher = teacherEmail.replace(/@.*$/, '').toLowerCase();
   emails[teacherEmail.toLowerCase()] = true;
-  const name = `${s.course} Period ${s.period} (${teacher})`;
+  const name = `${s.course} Period ${s.period} (${teacherLast})`;
   const slug = slugify(`${s.course}-p-${s.period}-${teacher}`);
   if (!(slug in classes)) {
-    classes[slug] = { course, period, name, teacherLast, teacher, students: [] }
+    classes[slug] = { ...s, name, teacherLast, teacher, students: [] }
   }
   if (!(teacher in teachers)) {
     teachers[teacher] = { name: teacher, students: [] };
@@ -86,7 +86,7 @@ app.get('/', requireLogin, async (req, res) => {
 });
 
 app.get('/hello', requireLogin, (req, res) => {
-  res.send('hello');
+  res.send(`hello: ${req.headers.host}`);
 });
 
 app.get(['/learn/p/:slug', '/review/p/:slug'], requireLogin, async (req, res) => {
@@ -159,7 +159,7 @@ app.get('/logout', (req, res, next) => {
   });
 });
 
-const server = app.listen(process.env.PORT, 'localhost', (error) => {
+const server = app.listen(process.env.PORT, '0.0.0.0', (error) => {
   if (error) {
     throw error;
   }

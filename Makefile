@@ -3,7 +3,17 @@
 
 SHELL := bash -O globstar
 
+env	:= $(dir $(PWD)).env
+tag	:= $(shell git rev-parse --short HEAD)
+name	:= bhscs
+
 all: db.db download-missing.sh students.tsv
+
+build: Dockerfile
+	docker build . -t $(tag)
+
+deploy:
+	./set-secrets.sh && fly deploy
 
 db.db: schema.sql students-2025-26.csv
 	sqlite3 $@ < $<

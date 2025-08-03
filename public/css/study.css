@@ -16,14 +16,15 @@ html {
 body {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: space-between;
   align-content: center;
   width: calc(min(40em, 80%));
-  margin: 1in auto;
+  margin: 5vh auto;
   padding: 2em 2em 5em;
   background: #eeeefa;
   border-radius: 12px;
   text-align: center;
+  height: 90vh;
 }
 
 img {
@@ -46,11 +47,16 @@ img {
   margin-top: 1em;
 }
 
-#progress {
-  margin-top: 2em;
-}
-
 .back .name {
   font-size: 1.5em;
   font-weight: 400;
+}
+
+#instructions {
+  font-style: italic;
+  font-size: 90%;
+  border: 1px dotted black;
+  background: #ddd;
+  padding: 1em;
+
 }

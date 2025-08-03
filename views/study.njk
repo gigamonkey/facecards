@@ -8,33 +8,39 @@
     <title>Facecards</title>
   </head>
   <body>
-    {% if name  %}
-      <h1>{{name}}</h1>
-    {% else %}
-      <h1>All students</h1>
-    {% endif %}
-    <div id="current">
-    </div>
-    {# <pre>{{ students | dump(2) }}</pre> #}
-    <div id="cards">
-      {% for student in students %}
-        <div class="card">
-          <img src="/images/{{student.studentNumber}}.jpg"></img>
-          <div class="back">
-            <p class="name">
-              {% if student.nickname %}
-                {{student.nickname}} ({{student.firstName}})
-              {% else %}
-                {{student.firstName}}
-              {% endif %}
-            </p>
-            <p>{{student.firstName}} {{student.lastName}}</p>
-            <p>{{student.grade}} / {{student.gender}}</p>
-            <p>{{student.course}} - Period {{student.period}}</p>
+    <div>
+      {% if name  %}
+        <h1>{{name}}</h1>
+      {% else %}
+        <h1>All students</h1>
+      {% endif %}
+      <div id="current">
+      </div>
+      {# <pre>{{ students | dump(2) }}</pre> #}
+      <div id="cards">
+        {% for student in students %}
+          <div class="card">
+            <img src="/images/{{student.studentNumber}}.jpg"></img>
+            <div class="back">
+              <p class="name">
+                {% if student.nickname %}
+                  {{student.nickname}} ({{student.firstName}})
+                {% else %}
+                  {{student.firstName}}
+                {% endif %}
+              </p>
+              <p>{{student.firstName}} {{student.lastName}}</p>
+              <p>{{student.grade}} / {{student.gender}}</p>
+              <p>{{student.course}} - Period {{student.period}}</p>
+            </div>
           </div>
-        </div>
-      {% endfor %}
+        {% endfor %}
+      </div>
     </div>
-    <div id="progress"></div>
+    <div id="instructions">
+      Press any key to show the name and other info on the back of the card.
+      When the back of the card is showing, press right arrow to indicate you
+      got it right and left arrow to indicate you got it wrong.
+    </div>
   </body>
 </html>

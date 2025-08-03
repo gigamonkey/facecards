@@ -10,11 +10,14 @@ const tsv = await loadTSV('students.tsv');
 
 const classes = {};
 tsv.forEach((s) => {
-  const key = `${s.course} - Period ${s.period}`;
-  if (!(key in classes)) {
-    classes[key] = [];
+  if (!(s.period in classes)) {
+    console.log(`Making class for period ${s.period}`);
+    classes[s.period] = {
+      name: `${s.course} - Period ${s.period}`,
+      students: [],
+    }
   }
-  classes[key].push(s);
+  classes[s.period].students.push(s);
 });
 
 app.set('json spaces', 2);

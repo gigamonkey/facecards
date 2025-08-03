@@ -20,7 +20,7 @@
         <div class="card">
           <img src="/images/{{student.personId}}.png"></img>
           <div class="back">
-            <p class="name">{{student.firstName}}</p>
+            <p class="name">{% if student.nickname %}{{student.nickname}}{% else %}{{student.firstName}}{% endif %}</p>
             <p>{{student.firstName}} {{student.lastName}}</p>
             <p>{{student.grade}} / {{student.gender}}</p>
             <p>{{student.course}} - Period {{student.period}}</p>

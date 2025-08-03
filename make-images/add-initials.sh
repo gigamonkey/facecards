@@ -1,11 +1,16 @@
 #!/bin/bash
 
-./initials.sh fixed/16065.png AC
-./initials.sh fixed/22999.png CC
-./initials.sh fixed/72448.png KE
-./initials.sh fixed/72619.png SW
-./initials.sh fixed/72934.png BD
-./initials.sh fixed/72979.png SO
-./initials.sh fixed/84232.png NF
-./initials.sh fixed/85818.png KG
-./initials.sh fixed/88497.png NS
+function add {
+    ./initials.sh fixed/$1.png $2
+}
+
+add 21126 SB
+add 74788 LD
+add 90711 EG
+add 90578 AK
+add 21021 LM
+add 19733 SN
+add 72533 MR
+add 92302 CS
+add 90653 GT
+add 92313 LW

@@ -79,7 +79,7 @@ class State {
 
     // We are either in the middle of moving up, having just added a correct
     // answer to some non-zero row or we added an incorrect answer to the zeroth
-    // row and reset this.row.
+    // row and reset this.row to 0.
     if (this.currentRow().isOverfull()) {
       return this.currentRow().next();
     }

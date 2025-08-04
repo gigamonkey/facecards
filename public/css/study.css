@@ -20,7 +20,6 @@ body {
   align-content: center;
   width: calc(min(40em, 80%));
   margin: 5vh auto;
-  padding: 2em 2em 5em;
   background: #eeeefa;
   border-radius: 12px;
   text-align: center;
@@ -68,5 +67,16 @@ img {
   }
   #instructions {
     display: none;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-content: center;
+    width: 100vw;
+    padding: 0;
+    margin: 5vh auto;
+    text-align: center;
+    height: 90vh;
   }
 }

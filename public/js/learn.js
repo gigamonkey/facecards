@@ -149,6 +149,9 @@ document.body.ontouchend = (e) => {
   }
 };
 
+// Suppress scrolling.
+document.addEventListener('touchmove', (e) =>  { e.preventDefault(); }, { passive: false });
+
 window.onkeydown = (e) => {
   let direction;
   if (e.code === 'ArrowLeft') {

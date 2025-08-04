@@ -60,3 +60,13 @@ img {
   padding: 1em;
 
 }
+
+@media (width <= 600px) {
+
+  h1 {
+    font-size: 12px;
+  }
+  #instructions {
+    display: none;
+  }
+}

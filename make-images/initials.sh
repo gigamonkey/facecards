@@ -5,4 +5,4 @@
 input="$1"
 initials="$2"
 
-convert "$input" -font 'Gill-Sans-Bold' -pointsize 32 -gravity South -annotate +0+40 "$initials" "$input"
+magick "$input" -font 'Gill-Sans-Bold' -pointsize 32 -gravity South -annotate +0+40 "$initials" "$input"

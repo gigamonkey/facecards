@@ -2,22 +2,24 @@
 
 set -euo pipefail
 
+source .cookie
+
 PHOTO_DIR=photos-2024-25
 
 personId="$1"
 studentNumber="$2"
 
-# Get this curl command by loading a page with an image on it and then right
-# clicking on the URL in the Network tab of the Chrome dev tools and choosing
-# "Copy as cURL". Then replace the specific personID in the query param with
-# with $personId.
+# Got the curl command below by loading a page with an image on it and then
+# right clicking on the URL in the Network tab of the Chrome dev tools and
+# choosing "Copy as cURL". Will need to refresh the cookie value in .cookie from
+# time to time by doing the same and then grabbing the -b value.
 
 curl "https://berkeleyca.infinitecampus.org/campus/personPicture.jsp?personID=$personId&alt=default-person-picture" \
   -H 'accept: image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8' \
   -H 'accept-language: en-US,en;q=0.9' \
-  -b '_did1805935447=b721b777-ecde-4857-86c2-9217eb64b95c; tool=; selection=; portalApp=parent; districtID=7; schoolID=5; endYear=2026; calendarID=702; permCalendarID=702; structureID=711; permSectionID=94055; sectionID=94055; JSESSIONID=579901F63336ADFD38ACECDCE9F2593A; XSRF-TOKEN=1620bff0-9aae-4120-8212-fdf5a04cbabb; appName=berkeley; __stripe_mid=9aef3d87-2679-4b0b-8801-c69a8533a26755130a; tomcat-cookie=177a4c02255f367b' \
+  -b "$COOKIE" \
   -H 'priority: i' \
-  -H 'referer: https://berkeleyca.infinitecampus.org/campus/sis/tools-student/summary/beta?year=2026&schoolID=5&calendarID=702&structureID=711&selectedPersonID=22715&appName=berkeley' \
+  -H "referer: https://berkeleyca.infinitecampus.org/campus/sis/tools-student/summary/beta?year=2026&schoolID=5&calendarID=702&structureID=711&selectedPersonID=$personId&appName=berkeley" \
   -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"' \
   -H 'sec-ch-ua-mobile: ?0' \
   -H 'sec-ch-ua-platform: "macOS"' \

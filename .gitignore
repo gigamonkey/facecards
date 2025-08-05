@@ -4,6 +4,7 @@
 *.env
 *.tsv
 *.zip
+.cookie
 .junk
 client-secret.json
 images-*

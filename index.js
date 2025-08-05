@@ -57,10 +57,11 @@ tsv.forEach((s) => {
     classes[slug] = { ...s, name, teacherLast, teacher, students: [] }
   }
   if (!(teacher in teachers)) {
-    teachers[teacher] = { name: teacher, students: [] };
+    teachers[teacher] = { name: teacher, teacherLast, classes: {}, students: [] };
   }
   classes[slug].students.push(s);
   teachers[teacher].students.push(s);
+  teachers[teacher].classes[slug] = classes[slug];
 });
 
 const requireLogin = (req, res, next) => {
@@ -82,7 +83,7 @@ const env = nunjucks.configure('views', {
 
 
 app.get('/', requireLogin, async (req, res) => {
-  res.render('index.njk', { classes });
+  res.render('index.njk', { teachers, classes });
 });
 
 app.get('/hello', requireLogin, (req, res) => {

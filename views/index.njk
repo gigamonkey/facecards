@@ -8,27 +8,36 @@
     <title>Facecards</title>
   </head>
   <body>
-    {% for slug, class in classes %}
-      <h1>{{class.course}} Period {{class.period}} ({{class.teacherLast}})</h1>
+    {% for key, teacher in teachers %}
+      <h1>{{teacher.teacherLast}}
+        <span class="buttons">
+          <a href="/learn/t/{{key}}">learn all</a>
+          <a href="/review/t/{{key}}">review all</a>
+        </span>
+      </h1>
+      {% for slug, class in teacher.classes %}
+        <h2>{{class.course}} Period {{class.period}} ({{class.teacherLast}})
 
-      <div class="buttons">
-        <a href="/learn/p/{{slug}}">learn</a>
-        <a href="/review/p/{{slug}}">review</a>
-      </div>
+        <span class="buttons">
+          <a href="/learn/p/{{slug}}">learn</a>
+          <a href="/review/p/{{slug}}">review</a>
+        </span>
+        </h2>
 
-    <div class="faces">
-      {% for student in class.students | sort(attribute='firstName') %}
-        <div class="card">
-          <img src="/images/{{student.studentNumber}}.jpg"></img>
-          <div class="back">
-            <p class="name">{% if student.nickname %}{{student.nickname}}{% else %}{{student.firstName}}{% endif %}</p>
-            <p>{{student.firstName}} {{student.lastName}}</p>
-            <p>{{student.grade}} / {{student.gender}}</p>
-            <p>{{student.course}} - Period {{student.period}}</p>
-          </div>
+        <div class="faces">
+          {% for student in class.students | sort(attribute='firstName') %}
+            <div class="card">
+              <img src="/images/{{student.studentNumber}}.jpg"></img>
+              <div class="back">
+                <p class="name">{% if student.nickname %}{{student.nickname}}{% else %}{{student.firstName}}{% endif %}</p>
+                <p>{{student.firstName}} {{student.lastName}}</p>
+                <p>{{student.grade}} / {{student.gender}}</p>
+                <p>{{student.course}} - Period {{student.period}}</p>
+              </div>
+            </div>
+          {% endfor %}
         </div>
       {% endfor %}
-    </div>
-  {% endfor %}
+    {% endfor %}
   </body>
 </html>

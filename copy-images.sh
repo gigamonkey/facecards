@@ -14,7 +14,7 @@ sqlite3 db.db --tabs "select studentNumber from students" | while read -r n; do
         else
             echo "Missing $n.jpg"
         fi
-    else
-        echo "Already copied $n.jpg"
+    #else
+        #echo "Already copied $n.jpg"
     fi
 done

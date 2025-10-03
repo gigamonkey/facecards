@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-photos="$1"
+photos=photos-2024-25
 
 mkdir -p public/images
 

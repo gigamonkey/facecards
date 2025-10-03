@@ -9,7 +9,7 @@ const google = new GoogleStrategy(
     passReqToCallback: true,
   },
   (req, accessToken, refreshToken, profile, done) => {
-    if (profile._json.hd !== 'berkeley.net' && profile._json.hd !== 'students.berkeley.net') {
+    if (!profile._json.hd.endsWith('berkeley.net')) {
       return done(null, false, { message: 'Invalid hosted domain' });
     }
     const google = {

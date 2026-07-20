@@ -62,7 +62,11 @@ tsv.forEach((s) => {
   classes[slug].students.push(s);
   teachers[teacher].students.push(s);
   teachers[teacher].classes[slug] = classes[slug];
+
 });
+
+// Add volunteers here.
+emails['femiolukoya@volunteers.berkeley.net'] = true;
 
 const requireLogin = (req, res, next) => {
   if (!req.user) {

@@ -4,7 +4,7 @@ set -euo pipefail
 
 source .cookie
 
-PHOTO_DIR=photos-2024-25
+PHOTO_DIR=photos-2025-26
 
 personId="$1"
 studentNumber="$2"
@@ -19,12 +19,12 @@ curl "https://berkeleyca.infinitecampus.org/campus/personPicture.jsp?personID=$p
   -H 'accept-language: en-US,en;q=0.9' \
   -b "$COOKIE" \
   -H 'priority: i' \
-  -H "referer: https://berkeleyca.infinitecampus.org/campus/sis/tools-student/summary/beta?year=2026&schoolID=5&calendarID=702&structureID=711&selectedPersonID=$personId&appName=berkeley" \
-  -H 'sec-ch-ua: "Not)A;Brand";v="8", "Chromium";v="138", "Google Chrome";v="138"' \
+  -H 'referer: https://berkeleyca.infinitecampus.org/campus/sis/student-admin/census/summary?year=2027&schoolID=5&calendarID=756&structureID=765&selectedPersonID=98817&appName=berkeley' \
+  -H 'sec-ch-ua: "Not;A=Brand";v="8", "Chromium";v="150", "Google Chrome";v="150"' \
   -H 'sec-ch-ua-mobile: ?0' \
   -H 'sec-ch-ua-platform: "macOS"' \
   -H 'sec-fetch-dest: image' \
   -H 'sec-fetch-mode: no-cors' \
   -H 'sec-fetch-site: same-origin' \
-  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36' \
+  -H 'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
   -o "$PHOTO_DIR/$studentNumber.jpg"

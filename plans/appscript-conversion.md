@@ -68,18 +68,21 @@ the **`berkeley.net` account** that owns the sheet and photos — so `clasp logi
 must be that account, not `peter@gigamonkeys.com`. DOMAIN access resolves to
 whatever Workspace the deploying account belongs to.
 
-### Open question: volunteers
+### Volunteers (deferred to v2)
 
-Commit `a9d17f2` ("How to handle volunteers") and `index.js:69` hardcode
-`femiolukoya@volunteers.berkeley.net`. A strict `@berkeley.net`-only rule
-**excludes** `@volunteers.berkeley.net`. Options:
+For **v1, the gate is strictly `@berkeley.net`** — the hardcoded
+`femiolukoya@volunteers.berkeley.net` from `index.js:69` is dropped, and there
+is no extra-emails escape hatch. Keep the auth gate as the single exact-suffix
+check above.
 
-- **(A)** Drop volunteer support — literal reading of "only `@berkeley.net`".
-- **(B, proposed)** Add `CONFIG.EXTRA_EMAILS` (comma-separated). The gate passes
-  if the email ends in `@berkeley.net` **or** is in `EXTRA_EMAILS`. Preserves
-  the volunteer use case with a data-driven escape hatch, defaults to empty.
-
-Recommend (B); needs your call before implementing the gate.
+The proper volunteer feature is a **v2** item, out of scope here. Intended
+design, recorded so v1 doesn't paint us into a corner: a teacher can add a
+volunteer to a **specific section**, and that volunteer gets a page scoped to
+just that section — the photo grid plus learn/review for that one section, and
+nothing else. That implies future data for section↔volunteer assignments (a
+sheet tab or similar) and a per-user scoping layer in `doGet` that resolves the
+viewer's email to the sections they may see. v1's single full-access model is a
+clean subset of that, so nothing here blocks it.
 
 ## Data model
 
@@ -127,10 +130,10 @@ function refreshPhotoMap() {
 }
 ```
 
-Run it manually (from the Apps Script editor or a spreadsheet custom menu via
-`onOpen`) whenever photos are added/changed. `doGet` reads the `photos` tab and
-builds `studentNumber → fileId` for the join. Missing photos → render a
-placeholder / blank card.
+Run it **manually from the Apps Script editor** whenever photos are added —
+which is itself a manual upload process, so no automation is needed. `doGet`
+reads the `photos` tab and builds `studentNumber → fileId` for the join. Missing
+photos → render a placeholder / blank card.
 
 ## Rendering & routing
 
@@ -183,7 +186,6 @@ so each current `public/js/*.js` module becomes a `.html` partial wrapping a
 
 - `SPREADSHEET_ID` — the student spreadsheet.
 - `DRIVE_FOLDER_ID` — the photos folder.
-- `EXTRA_EMAILS` — optional volunteer allowlist (see open question).
 
 Accessed in server code as `CONFIG.SPREADSHEET_ID`, etc. `config.js` is pushed
 with the code and lives in git (fine for IDs, not secrets — there are none here).
@@ -205,7 +207,6 @@ the `convert` branch.
 4. **Configure resources:**
    ```bash
    hug config set SPREADSHEET_ID=<id> DRIVE_FOLDER_ID=<id>
-   # optionally: hug config set EXTRA_EMAILS=femiolukoya@volunteers.berkeley.net
    ```
 5. **Populate the photos tab:** run `refreshPhotoMap` once (Apps Script editor).
 6. **Deploy:**
@@ -254,9 +255,8 @@ reference.
 - **Review**: single pass then missed-only re-runs; "Perfect run!" on zero misses.
 - **Input**: arrow keys + touch swipes; first press reveals the card back.
 
-## Decisions to confirm before implementing
+## Settled decisions
 
-1. **Volunteers** — option (A) drop, or (B) `CONFIG.EXTRA_EMAILS` escape hatch
-   (recommended).
-2. **Photos tab refresh** — manual run is assumed; add an `onOpen` custom menu
-   item or a time-driven trigger if you want it automated.
+1. **Volunteers** — v1 is strictly `@berkeley.net`; the hardcoded volunteer is
+   dropped. Proper per-section volunteer access is a v2 feature (see above).
+2. **Photos tab refresh** — manual run from the Apps Script editor; no automation.

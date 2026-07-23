@@ -38,11 +38,15 @@
       var tr = el('tr');
 
       var tdPhoto = el('td', 'photo');
-      var img = el('img');
-      img.loading = 'lazy';
-      img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
-      if (s.fileId) img.src = thumbUrl(s.fileId, 200);
-      tdPhoto.appendChild(img);
+      if (s.fileId) {
+        var img = el('img');
+        img.loading = 'lazy';
+        img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+        img.src = thumbUrl(s.fileId, 200);
+        tdPhoto.appendChild(img);
+      } else {
+        tdPhoto.appendChild(el('div', 'initials', initials(s)));
+      }
       tr.appendChild(tdPhoto);
 
       var tdInfo = el('td', 'info');
@@ -237,10 +241,14 @@
   function buildSharedCard(s, shared) {
     var card = el('div', 'swipe-card');
 
-    var img = el('img');
-    img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
-    if (s.fileId) img.dataset.fileid = s.fileId; // proxy-loaded when shown
-    card.appendChild(img);
+    if (s.fileId) {
+      var img = el('img');
+      img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+      img.dataset.fileid = s.fileId; // proxy-loaded when shown
+      card.appendChild(img);
+    } else {
+      card.appendChild(el('div', 'initials', initials(s)));
+    }
 
     var info = el('div', 'swipe-info');
     info.appendChild(

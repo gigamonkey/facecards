@@ -36,7 +36,8 @@ live; unchecked items are planned.
       across all of the teacher's students
 
 - [x] Home and shared grids show student photos via Google Drive thumbnail URLs;
-      missing photos degrade to a blank card
+      a student with no photo shows a box with their initials instead (everywhere
+      — grids, study cards, and the shared views)
 
 - [x] On phones the photo grid is hidden and study mode is used instead
 

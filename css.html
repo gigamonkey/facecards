@@ -28,6 +28,33 @@
     background: #dde;
     min-height: 120px;
   }
+  /* Shown in place of the photo for students who have no photo. Sized per
+     context to match the image it replaces. */
+  .initials {
+    width: 172px; /* grid default */
+    aspect-ratio: 3 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: #ccd;
+    color: #446;
+    font-weight: 600;
+    font-size: 2.4rem;
+  }
+  body.view-study .card .initials {
+    width: 100%;
+    font-size: min(22vw, 6rem);
+  }
+  .swipe-card .initials {
+    width: 60vw;
+    max-width: 260px;
+    font-size: min(18vw, 5rem);
+  }
+  .shared-table td.photo .initials {
+    width: 100px;
+    font-size: 1.6rem;
+  }
   .back .name {
     font-size: 1.5em;
     font-weight: 400;

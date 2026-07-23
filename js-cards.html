@@ -19,20 +19,24 @@
   // opts.initialsAlt:   alt text is just the student's initials, not their name,
   //                     so a not-yet-loaded study card doesn't reveal the answer.
   // Mirrors views/index.njk and views/study.njk.
+  function initials(s) {
+    return ((s.firstName || '').charAt(0) + (s.lastName || '').charAt(0)).toUpperCase();
+  }
+
   function buildCard(s, opts) {
     opts = opts || {};
     var card = el('div', 'card');
 
-    var img = el('img');
-    img.alt = opts.initialsAlt
-      ? ((s.firstName || '').charAt(0) + (s.lastName || '').charAt(0)).toUpperCase()
-      : (s.firstName || '') + ' ' + (s.lastName || '');
-    img.loading = 'lazy';
     if (s.fileId) {
+      var img = el('img');
+      img.alt = opts.initialsAlt ? initials(s) : (s.firstName || '') + ' ' + (s.lastName || '');
+      img.loading = 'lazy';
       if (opts.defer) img.dataset.fileid = s.fileId; // fetched via proxy when shown
       else img.src = thumbUrl(s.fileId, 400);
+      card.appendChild(img);
+    } else {
+      card.appendChild(el('div', 'initials', initials(s))); // no photo → initials box
     }
-    card.appendChild(img);
 
     var back = el('div', 'back');
     var nameText = s.nickname

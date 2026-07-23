@@ -185,10 +185,51 @@
     width: calc(min(40em, 80%));
     margin: 0;
   }
-  /* Mobile "?" help toggle + panel — hidden on desktop (footer shows instead). */
-  .help-toggle,
-  .help-panel {
+  /* Navbar "?" help button + the overlay it opens. */
+  .nav-help {
+    display: none; /* mobile only — desktop study shows the footer instructions */
+    border: none;
+    background: none;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0 0.3em;
+  }
+  .help-overlay {
     display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    padding: 1em;
+  }
+  .help-overlay.show {
+    display: flex;
+  }
+  .help-box {
+    position: relative;
+    background: #fff;
+    border-radius: 10px;
+    max-width: 26em;
+    width: 100%;
+    padding: 1.5em;
+    text-align: left;
+  }
+  .help-box h2 {
+    margin-bottom: 0.5em;
+  }
+  .help-close {
+    position: absolute;
+    top: 0.2em;
+    right: 0.4em;
+    border: none;
+    background: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
   }
 
   /* ---- Shared-with table view ---- */
@@ -427,42 +468,11 @@
       max-width: 85vw;
     }
     body.view-study #instructions {
-      display: none;
+      display: none; /* replaced by the navbar "?" overlay on mobile */
     }
-    body.view-study .help-toggle {
-      display: flex;
+    .nav-help {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      position: fixed;
-      right: 0.8em;
-      bottom: 0.8em;
-      width: 2.4em;
-      height: 2.4em;
-      padding: 0;
-      border-radius: 50%;
-      border: 1px solid #445;
-      background: #ddf;
-      color: #113;
-      font-size: 1.4em;
-      line-height: 1;
-      cursor: pointer;
-      z-index: 1000;
-    }
-    body.view-study .help-panel.show {
-      display: block;
-      position: fixed;
-      right: 0.8em;
-      bottom: 4em;
-      max-width: 75%;
-      margin: 0;
-      background: #ddd;
-      border: 1px dotted black;
-      border-radius: 8px;
-      padding: 1em;
-      font-style: italic;
-      font-size: 0.95em;
-      text-align: left;
-      z-index: 1000;
     }
   }
 </style>

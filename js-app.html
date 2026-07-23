@@ -12,6 +12,9 @@
     var banner = document.getElementById('banner');
     var teardownStudy = null;
 
+    var helpOverlay = buildHelpOverlay();
+    document.body.appendChild(helpOverlay);
+
     renderBanner();
 
     function setView(name) {
@@ -118,31 +121,9 @@
         'the card. When the back is showing, press right arrow (or swipe right) ' +
         'if you got it right and left arrow (swipe left) if you got it wrong.';
 
-      // Mobile only (CSS-gated): a "?" button that toggles a short touch tip.
-      var helpPanel = el('div', 'help-panel');
-      helpPanel.textContent =
-        'Tap the card to reveal the name, then swipe right if you got it or left if you missed it.';
-      var help = el('button', 'help-toggle', '?');
-      help.setAttribute('type', 'button');
-      help.setAttribute('aria-label', 'Instructions');
-      help.addEventListener('click', function (e) {
-        e.stopPropagation();
-        helpPanel.classList.toggle('show');
-      });
-      // Keep taps on the button/panel from reaching the card's touch handlers.
-      ['touchstart', 'touchend'].forEach(function (evt) {
-        var stop = function (e) {
-          e.stopPropagation();
-        };
-        help.addEventListener(evt, stop);
-        helpPanel.addEventListener(evt, stop);
-      });
-
       app.appendChild(header);
       app.appendChild(current);
       app.appendChild(instructions);
-      app.appendChild(helpPanel);
-      app.appendChild(help);
 
       var cards = students.map(function (s) {
         return buildCard(s, {
@@ -174,6 +155,14 @@
       nav.appendChild(navLink('Learn', base + '?learn'));
       nav.appendChild(navLink('Shared', base + '?shared'));
       banner.appendChild(nav);
+
+      var help = el('button', 'nav-help', '?');
+      help.type = 'button';
+      help.setAttribute('aria-label', 'How to use the flashcards');
+      help.addEventListener('click', function () {
+        helpOverlay.classList.add('show');
+      });
+      banner.appendChild(help);
 
       // Impersonation notice — admins viewing as someone else.
       if (CTX.impersonating) {
@@ -215,6 +204,35 @@
       a.href = href || '#';
       if (CTX.baseUrl) a.target = '_top';
       return a;
+    }
+
+    // A modal explaining how to study; opened by the navbar "?", closed by its ×
+    // or by clicking the backdrop.
+    function buildHelpOverlay() {
+      var overlay = el('div', 'help-overlay');
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) overlay.classList.remove('show');
+      });
+
+      var box = el('div', 'help-box');
+      var close = el('button', 'help-close', '×');
+      close.type = 'button';
+      close.setAttribute('aria-label', 'Close');
+      close.addEventListener('click', function () {
+        overlay.classList.remove('show');
+      });
+      box.appendChild(close);
+      box.appendChild(el('h2', null, 'How to study'));
+      box.appendChild(
+        el(
+          'p',
+          null,
+          'Tap the card (or press any key) to reveal the name. Then swipe right ' +
+            '(or press →) if you got it, and swipe left (or press ←) if you missed it.',
+        ),
+      );
+      overlay.appendChild(box);
+      return overlay;
     }
 
     // Initial dispatch: a shared learn/review link lands straight in study mode;

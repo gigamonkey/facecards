@@ -6,12 +6,6 @@
     var wrap = el('div');
     wrap.id = 'shared';
 
-    var baseUrl = (window.CTX && CTX.baseUrl) || '';
-    var home = el('a', 'home-link', '← Home');
-    home.href = baseUrl || '#';
-    if (baseUrl) home.target = '_top';
-    wrap.appendChild(home);
-
     if (!shared || !shared.resolved) {
       wrap.appendChild(
         el('p', null, 'No teacher found matching “' + (shared ? shared.param : '') + '”.'),
@@ -88,10 +82,6 @@
     wrap.id = 'shared-overview';
 
     var baseUrl = (window.CTX && CTX.baseUrl) || '';
-    var home = el('a', 'home-link', '← Home');
-    home.href = baseUrl || '#';
-    if (baseUrl) home.target = '_top';
-    wrap.appendChild(home);
 
     wrap.appendChild(el('h1', null, 'Shared students'));
 
@@ -135,10 +125,6 @@
     wrap.id = 'shared-list';
 
     var baseUrl = (window.CTX && window.CTX.baseUrl) || '';
-    var home = el('a', 'home-link', '← Home');
-    home.href = baseUrl || '#';
-    if (baseUrl) home.target = '_top';
-    wrap.appendChild(home);
 
     wrap.appendChild(el('h1', null, 'Shared students'));
 
@@ -168,12 +154,6 @@
     container.innerHTML = '';
     var wrap = el('div');
     wrap.id = 'shared-swipe';
-
-    var baseUrl = (window.CTX && window.CTX.baseUrl) || '';
-    var back = el('a', 'home-link', '← Teachers');
-    back.href = baseUrl ? baseUrl + '?shared' : '#';
-    if (baseUrl) back.target = '_top';
-    wrap.appendChild(back);
 
     if (!shared || !shared.resolved) {
       wrap.appendChild(
@@ -233,10 +213,11 @@
       startX = null;
       if (Math.abs(dx) > 40) show(dx < 0 ? idx + 1 : idx - 1);
     }
-    stage.addEventListener('touchstart', onStart, { passive: true });
-    stage.addEventListener('touchmove', onMove, { passive: false });
-    stage.addEventListener('touchend', onEnd);
-    stage.addEventListener('touchcancel', onEnd);
+    // Listen on the whole page (not just the card) so a swipe anywhere works.
+    document.body.addEventListener('touchstart', onStart, { passive: true });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.body.addEventListener('touchend', onEnd);
+    document.body.addEventListener('touchcancel', onEnd);
 
     // Arrow keys too (handy for testing on a desktop-sized window).
     window.addEventListener('keydown', function (e) {

@@ -115,161 +115,83 @@ function include(name) {
  * by slug and each student is joined to its photo fileId.
  */
 function buildModel(email) {
-  return cachedBig('model:' + email, function () {
+  return cachedBig('model:' + username(email), function () {
     return buildModelUncached(email);
   });
 }
 
 function buildModelUncached(email) {
-  var rows = getRoster().filter(function (r) {
-    return normalizeEmail(r.teacherEmail) === email;
-  });
-  return modelFromRows(rows);
-}
+  var data = getData();
+  var teacher = data.teachers[username(email)];
+  if (!teacher) return { teacherLast: '', classes: {} };
 
-// Build the { teacherLast, classes } model from one teacher's roster rows
-// (which already carry each student's photo fileId).
-function modelFromRows(rows) {
   var classes = {};
-  var teacherLast = '';
-
-  // A "class" is the group of students a teacher sees together — one room at one
-  // period. Several course codes can share that slot (e.g. Biology + Biology H),
-  // so we key on room + period and collect the distinct course names for the
-  // display name.
-  rows.forEach(function (s) {
-    var lastName = String(s.teacherName || '').replace(/,.*$/, '');
-    var teacher = String(s.teacherEmail || '').replace(/@.*$/, '').toLowerCase();
-    var slug = slugify(s.room + '-p-' + s.period + '-' + teacher);
-    teacherLast = lastName;
-
-    if (!(slug in classes)) {
-      classes[slug] = {
-        slug: slug,
-        room: s.room,
-        period: s.period,
-        teacherLast: lastName,
-        courses: [], // distinct course names sharing this room + period
-        students: [],
-      };
-    }
-    var c = classes[slug];
-    var course = String(s.course || '');
-    if (course && c.courses.indexOf(course) === -1) c.courses.push(course);
-    c.students.push({
-      studentNumber: String(s.studentNumber),
-      firstName: s.firstName,
-      lastName: s.lastName,
-      nickname: s.nickname,
-      grade: s.grade,
-      gender: s.gender,
-      course: s.course,
-      period: s.period,
-      fileId: s.fileId || '',
-    });
+  Object.keys(teacher.periods).forEach(function (period) {
+    var sec = teacher.periods[period];
+    var slug = slugify(username(email) + '-p' + period);
+    var name = sectionName(sec, period);
+    classes[slug] = {
+      slug: slug,
+      name: name,
+      period: period,
+      teacherLast: teacher.last,
+      students: sec.students.map(function (num) {
+        var o = studentBase(data, num);
+        o.course = name;
+        o.period = period;
+        return o;
+      }),
+    };
   });
-
-  // Name each class from its course list: "Biology / Biology H Period 2".
-  Object.keys(classes).forEach(function (slug) {
-    var c = classes[slug];
-    c.courses.sort(function (a, b) {
-      return a.localeCompare(b);
-    });
-    c.name = c.courses.join(' / ') + ' Period ' + c.period;
-  });
-
-  return { teacherLast: teacherLast, classes: classes };
+  return { teacherLast: teacher.last, classes: classes };
 }
 
-/**
- * Build the "shared with" table model: students that the current teacher and a
- * named other teacher both teach. For each such student we return their photo,
- * identity info, the current teacher's class(es), and the other teacher's
- * class(es), sorted by the current teacher's period, then the other's, then
- * last name, then first name. Returns { resolved: false, param } when the other
- * teacher can't be found.
- */
 function buildSharedModel(currentEmail, param) {
-  return cachedBig('sharedwith:' + currentEmail + ':' + normalizeEmail(param), function () {
-    return buildSharedModelUncached(currentEmail, param);
-  });
+  return cachedBig(
+    'sharedwith:' + username(currentEmail) + ':' + normalizeEmail(param),
+    function () {
+      return buildSharedModelUncached(currentEmail, param);
+    },
+  );
 }
 
 function buildSharedModelUncached(currentEmail, param) {
-  var rows = getRoster();
+  var data = getData();
+  var me = data.teachers[username(currentEmail)];
 
-  var otherEmails = resolveTeachers(rows, param);
-  otherEmails.delete(currentEmail); // sharing "with yourself" is meaningless
-  if (otherEmails.size === 0) {
+  var others = resolveTeachers(data, param).filter(function (k) {
+    return k !== username(currentEmail);
+  });
+  if (!me || !others.length) {
     return { resolved: false, param: param };
   }
 
-  // Group every row into room+period classes (per teacher) and track, per
-  // student, which classes they're in. This spans the whole roster, not just
-  // the viewer's sections.
-  var classIndex = {}; // slug -> { name, period, teacherEmail, courses }
-  var info = {}; // studentNumber -> identity fields
-  var slugsFor = {}; // studentNumber -> Set(slug)
-
-  rows.forEach(function (s) {
-    var num = String(s.studentNumber);
-    var teacher = normalizeEmail(s.teacherEmail);
-    var local = teacher.replace(/@.*$/, '');
-    var slug = slugify(s.room + '-p-' + s.period + '-' + local);
-
-    if (!classIndex[slug]) {
-      classIndex[slug] = { period: s.period, teacherEmail: teacher, courses: [] };
-    }
-    var course = String(s.course || '');
-    if (course && classIndex[slug].courses.indexOf(course) === -1) {
-      classIndex[slug].courses.push(course);
-    }
-
-    if (!info[num]) {
-      info[num] = {
-        studentNumber: num,
-        firstName: s.firstName,
-        lastName: s.lastName,
-        nickname: s.nickname,
-        grade: s.grade,
-        gender: s.gender,
-        fileId: s.fileId || '',
-      };
-    }
-    (slugsFor[num] = slugsFor[num] || new Set()).add(slug);
-  });
-
-  Object.keys(classIndex).forEach(function (slug) {
-    var c = classIndex[slug];
-    c.courses.sort(function (a, b) { return a.localeCompare(b); });
-    c.name = c.courses.join(' / ') + ' Period ' + c.period;
-  });
-
   var students = [];
-  Object.keys(slugsFor).forEach(function (num) {
-    var mine = [];
-    var other = [];
-    slugsFor[num].forEach(function (slug) {
-      var c = classIndex[slug];
-      if (c.teacherEmail === currentEmail) mine.push(c);
-      else if (otherEmails.has(c.teacherEmail)) other.push(c);
+  Object.keys(myStudentNums(me)).forEach(function (num) {
+    var st = data.students[num];
+    if (!st) return;
+    var matched = others.filter(function (k) {
+      return st.teachers.indexOf(k) !== -1;
     });
-    if (mine.length && other.length) {
-      var i = info[num];
-      students.push({
-        studentNumber: num,
-        firstName: i.firstName,
-        lastName: i.lastName,
-        nickname: i.nickname,
-        grade: i.grade,
-        gender: i.gender,
-        fileId: i.fileId,
-        mine: classNames(mine),
-        other: classNames(other),
-        minePeriod: minPeriod(mine),
-        otherPeriod: minPeriod(other),
+    if (!matched.length) return;
+
+    var mine = teacherClassesFor(me, num);
+    var otherNames = [];
+    var otherPeriods = [];
+    matched.forEach(function (k) {
+      var c = teacherClassesFor(data.teachers[k], num);
+      c.names.forEach(function (n) {
+        if (otherNames.indexOf(n) === -1) otherNames.push(n);
       });
-    }
+      otherPeriods.push(c.minPeriod);
+    });
+
+    var base = studentBase(data, num);
+    base.mine = mine.names;
+    base.other = otherNames.sort(cmpStr);
+    base.minePeriod = mine.minPeriod;
+    base.otherPeriod = Math.min.apply(null, otherPeriods);
+    students.push(base);
   });
 
   students.sort(function (a, b) {
@@ -281,9 +203,7 @@ function buildSharedModelUncached(currentEmail, param) {
     );
   });
 
-  var me = teacherNames(rows, new Set([currentEmail]));
-  var them = teacherNames(rows, otherEmails);
-
+  var them = teacherNamesFor(data, others);
   return {
     resolved: true,
     meLast: me.last,
@@ -294,133 +214,38 @@ function buildSharedModelUncached(currentEmail, param) {
   };
 }
 
-// Resolve a "shared-with" value to a set of teacher emails, matching by full
-// email, bare username, email local-part, teacher last name, or full
-// teacherName — whatever the caller typed.
-function resolveTeachers(rows, param) {
-  var raw = normalizeEmail(param);
-  var qualified = qualifyEmail(param);
-  var out = new Set();
-  rows.forEach(function (s) {
-    var email = normalizeEmail(s.teacherEmail);
-    if (!email) return;
-    var local = email.replace(/@.*$/, '');
-    var last = String(s.teacherName || '').replace(/,.*$/, '').trim().toLowerCase();
-    var full = String(s.teacherName || '').trim().toLowerCase();
-    if (email === qualified || email === raw || local === raw || last === raw || full === raw) {
-      out.add(email);
-    }
-  });
-  return out;
-}
-
-// Distinct last name(s) and full name(s) for a set of teacher emails.
-// teacherName is stored "Last, First"; fullName renders it as "First Last".
-function teacherNames(rows, emails) {
-  var lasts = [];
-  var fulls = [];
-  rows.forEach(function (s) {
-    if (!emails.has(normalizeEmail(s.teacherEmail))) return;
-    var raw = String(s.teacherName || '').trim();
-    var last = raw.replace(/,.*$/, '').trim();
-    var full = fullName(raw);
-    if (last && lasts.indexOf(last) === -1) lasts.push(last);
-    if (full && fulls.indexOf(full) === -1) fulls.push(full);
-  });
-  return { last: lasts.join(' / '), full: fulls.join(' / ') };
-}
-
-function fullName(raw) {
-  var parts = String(raw).split(',');
-  if (parts.length === 2) return parts[1].trim() + ' ' + parts[0].trim();
-  return String(raw).trim();
-}
-
-// Distinct class names from a list of class objects, sorted.
-function classNames(list) {
-  var names = [];
-  list.forEach(function (c) {
-    if (names.indexOf(c.name) === -1) names.push(c.name);
-  });
-  names.sort(function (a, b) { return a.localeCompare(b); });
-  return names;
-}
-
-function periodNum(p) {
-  var n = parseInt(p, 10);
-  return isNaN(n) ? 9999 : n;
-}
-
-function minPeriod(list) {
-  return list.reduce(function (m, c) {
-    return Math.min(m, periodNum(c.period));
-  }, Infinity);
-}
-
-/**
- * Build the shared-overview model for a viewer: every other teacher who shares
- * at least one student with them, each with the list of shared students. The
- * `key` (email username) links to that teacher's ?shared-with= page. Teachers
- * are sorted by last name; students within each by last then first name.
- */
 function buildSharedOverview(currentEmail) {
-  return cachedBig('overview:' + currentEmail, function () {
+  return cachedBig('overview:' + username(currentEmail), function () {
     return buildSharedOverviewUncached(currentEmail);
   });
 }
 
 function buildSharedOverviewUncached(currentEmail) {
-  var rows = getRoster();
+  var data = getData();
+  var me = data.teachers[username(currentEmail)];
+  if (!me) return { teachers: [] };
 
-  var teachersOf = {}; // studentNumber -> Set(teacherEmail)
-  var coursesOf = {}; // "studentNumber|teacherEmail" -> Set(course)
-  var info = {}; // studentNumber -> identity fields
+  var mine = myStudentNums(me);
 
-  rows.forEach(function (s) {
-    var email = normalizeEmail(s.teacherEmail);
-    if (!email) return;
-    var num = String(s.studentNumber);
-
-    (teachersOf[num] = teachersOf[num] || new Set()).add(email);
-
-    var course = String(s.course || '').trim();
-    if (course) {
-      var k = num + '|' + email;
-      (coursesOf[k] = coursesOf[k] || new Set()).add(course);
-    }
-
-    if (!info[num]) {
-      info[num] = {
-        studentNumber: num,
-        firstName: s.firstName,
-        lastName: s.lastName,
-        nickname: s.nickname,
-        grade: s.grade,
-        gender: s.gender,
-        fileId: s.fileId || '',
-      };
-    }
-  });
-
-  // For each of the viewer's students, add them under every other teacher who
-  // also teaches them.
-  var byTeacher = {}; // otherEmail -> [studentNumber]
-  Object.keys(teachersOf).forEach(function (num) {
-    var set = teachersOf[num];
-    if (!set.has(currentEmail)) return;
-    set.forEach(function (email) {
-      if (email === currentEmail) return;
-      (byTeacher[email] = byTeacher[email] || []).push(num);
+  // other username -> [shared student numbers]
+  var byTeacher = {};
+  Object.keys(mine).forEach(function (num) {
+    var st = data.students[num];
+    if (!st) return;
+    st.teachers.forEach(function (other) {
+      if (other !== username(currentEmail)) {
+        (byTeacher[other] = byTeacher[other] || []).push(num);
+      }
     });
   });
 
-  var teachers = Object.keys(byTeacher).map(function (email) {
-    var names = teacherNames(rows, new Set([email]));
-    var nums = byTeacher[email];
+  var teachers = Object.keys(byTeacher).map(function (other) {
+    var ot = data.teachers[other];
+    var nums = byTeacher[other];
 
     var students = nums
       .map(function (num) {
-        return info[num];
+        return studentBase(data, num);
       })
       .sort(function (a, b) {
         return (
@@ -429,26 +254,23 @@ function buildSharedOverviewUncached(currentEmail) {
         );
       });
 
-    // Distinct course names the shared students take with this teacher, no
-    // period — "Spanish II" once, however many periods it runs.
+    // Distinct individual course names this teacher teaches the shared students.
     var courseSet = {};
     nums.forEach(function (num) {
-      var set = coursesOf[num + '|' + email];
-      if (set) {
-        set.forEach(function (c) {
-          courseSet[c] = true;
-        });
-      }
-    });
-    var courses = Object.keys(courseSet).sort(function (a, b) {
-      return a.localeCompare(b);
+      Object.keys(ot.periods).forEach(function (p) {
+        if (ot.periods[p].students.indexOf(num) !== -1) {
+          ot.periods[p].courses.forEach(function (c) {
+            courseSet[c] = true;
+          });
+        }
+      });
     });
 
     return {
-      key: email.replace(/@.*$/, ''), // username → ?shared-with=<key>
-      last: names.last,
-      full: names.full,
-      courses: courses,
+      key: other,
+      last: ot.last,
+      full: ot.full,
+      courses: Object.keys(courseSet).sort(cmpStr),
       students: students,
     };
   });
@@ -461,6 +283,107 @@ function buildSharedOverviewUncached(currentEmail) {
   });
 
   return { teachers: teachers };
+}
+
+/* ------------------------------------------------------------------ */
+/* Helpers over the normalized data                                    */
+/* ------------------------------------------------------------------ */
+
+function username(email) {
+  return normalizeEmail(email).replace(/@.*$/, '');
+}
+
+// Concatenated display name for a section: "Biology / Biology H Period 2".
+function sectionName(sec, period) {
+  return sec.courses.join(' / ') + ' Period ' + period;
+}
+
+// A client student object (identity only) from the normalized students map.
+function studentBase(data, num) {
+  var s = data.students[num] || { studentNumber: num };
+  return {
+    studentNumber: s.studentNumber || num,
+    firstName: s.firstName,
+    lastName: s.lastName,
+    nickname: s.nickname,
+    grade: s.grade,
+    gender: s.gender,
+    fileId: s.fileId || '',
+  };
+}
+
+// All of a teacher's student numbers across their periods, as a set.
+function myStudentNums(teacher) {
+  var nums = {};
+  Object.keys(teacher.periods).forEach(function (p) {
+    teacher.periods[p].students.forEach(function (num) {
+      nums[num] = true;
+    });
+  });
+  return nums;
+}
+
+// The class name(s) and earliest period a student sits in for one teacher.
+function teacherClassesFor(teacher, num) {
+  var names = [];
+  var minP = Infinity;
+  Object.keys(teacher.periods).forEach(function (p) {
+    if (teacher.periods[p].students.indexOf(num) !== -1) {
+      names.push(sectionName(teacher.periods[p], p));
+      minP = Math.min(minP, periodNum(p));
+    }
+  });
+  return { names: names.sort(cmpStr), minPeriod: minP };
+}
+
+// Resolve a ?shared-with= value to teacher usernames: match by username, last
+// name, full name, or email (bare usernames get @berkeley.net appended).
+function resolveTeachers(data, param) {
+  var raw = normalizeEmail(param);
+  var qualified = qualifyEmail(param);
+  var out = [];
+  Object.keys(data.teachers).forEach(function (u) {
+    var t = data.teachers[u];
+    if (
+      t.email === qualified ||
+      t.email === raw ||
+      u === raw ||
+      String(t.last || '').toLowerCase() === raw ||
+      String(t.full || '').toLowerCase() === raw
+    ) {
+      out.push(u);
+    }
+  });
+  return out;
+}
+
+// Distinct last name(s) and full name(s) for a set of teacher usernames.
+function teacherNamesFor(data, usernames) {
+  var lasts = [];
+  var fulls = [];
+  usernames.forEach(function (u) {
+    var t = data.teachers[u];
+    if (!t) return;
+    if (t.last && lasts.indexOf(t.last) === -1) lasts.push(t.last);
+    if (t.full && fulls.indexOf(t.full) === -1) fulls.push(t.full);
+  });
+  return { last: lasts.join(' / '), full: fulls.join(' / ') };
+}
+
+// "Last, First" -> "First Last"; other formats pass through.
+function fullName(raw) {
+  var parts = String(raw || '').split(',');
+  if (parts.length === 2) return parts[1].trim() + ' ' + parts[0].trim();
+  return String(raw || '').trim();
+}
+
+function cmpStr(a, b) {
+  return String(a).localeCompare(String(b));
+}
+
+function periodNum(p) {
+  var n = parseInt(p, 10);
+  return isNaN(n) ? 9999 : n;
 }
 
 /**
@@ -743,35 +666,80 @@ function writeChunks(key, str) {
 }
 
 /**
- * The distilled roster: only the columns the app uses, with each student's photo
- * fileId joined in, cached globally (in chunks). This is the one expensive sheet
- * read; every viewer's model is filtered from this cached copy rather than
- * re-reading the sheet.
+ * The whole roster, normalized once and cached (in chunks): students deduped
+ * into a map, teachers into a map of period -> { room, courses, student
+ * numbers }, and each student carrying the usernames of their teachers (so
+ * "shared" is a cheap derive). Every viewer's view is a lookup into this, not a
+ * scan of the sheet.
  */
-function getRoster() {
-  return cachedBig('roster', function () {
-    var t0 = new Date().getTime();
-    var students = readStudents();
-    var photos = readPhotoMap();
-    var roster = students.map(function (s) {
-      return {
-        teacherEmail: s.teacherEmail,
-        teacherName: s.teacherName,
-        room: s.room,
-        period: s.period,
-        course: s.course,
-        studentNumber: s.studentNumber,
+function getData() {
+  return cachedBig('data', buildData);
+}
+
+function buildData() {
+  var t0 = new Date().getTime();
+  var rows = readStudents();
+  var photos = readPhotoMap();
+
+  var students = {};
+  var teachers = {};
+
+  rows.forEach(function (s) {
+    var num = String(s.studentNumber);
+    var email = normalizeEmail(s.teacherEmail);
+    if (!num || !email) return;
+    var user = email.replace(/@.*$/, '');
+    var period = String(s.period);
+
+    if (!students[num]) {
+      students[num] = {
+        studentNumber: num,
         firstName: s.firstName,
+        middleName: s.middleName,
         lastName: s.lastName,
         nickname: s.nickname,
         grade: s.grade,
         gender: s.gender,
-        fileId: photos[String(s.studentNumber)] || '',
+        fileId: photos[num] || '',
+        teachers: [],
       };
-    });
-    logTime('getRoster distill (' + roster.length + ' rows)', t0);
-    return roster;
+    }
+    if (students[num].teachers.indexOf(user) === -1) students[num].teachers.push(user);
+
+    if (!teachers[user]) {
+      teachers[user] = {
+        email: email,
+        last: String(s.teacherName || '').replace(/,.*$/, '').trim(),
+        full: fullName(s.teacherName),
+        periods: {},
+      };
+    }
+    var periods = teachers[user].periods;
+    if (!periods[period]) {
+      periods[period] = { room: String(s.room || ''), courses: [], students: [] };
+    }
+    var sec = periods[period];
+    var course = String(s.course || '').trim();
+    if (course && sec.courses.indexOf(course) === -1) sec.courses.push(course);
+    if (sec.students.indexOf(num) === -1) sec.students.push(num);
   });
+
+  Object.keys(teachers).forEach(function (u) {
+    var periods = teachers[u].periods;
+    Object.keys(periods).forEach(function (p) {
+      periods[p].courses.sort(cmpStr);
+    });
+  });
+
+  logTime(
+    'buildData (' +
+      Object.keys(students).length +
+      ' students, ' +
+      Object.keys(teachers).length +
+      ' teachers)',
+    t0,
+  );
+  return { students: students, teachers: teachers };
 }
 
 /** Invalidate all cached models/admins. Run after editing the roster. */

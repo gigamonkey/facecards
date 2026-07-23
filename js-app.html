@@ -133,6 +133,11 @@
 
       var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);
       teardownStudy = runStudy(state, current);
+      preloadPhotos(
+        students.map(function (s) {
+          return s.fileId;
+        }),
+      );
       window.scrollTo(0, 0);
     }
 

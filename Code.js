@@ -463,6 +463,24 @@ function refreshPhotoMap() {
   Logger.log('Wrote ' + rows.length + ' photo rows to the "' + PHOTOS_SHEET + '" tab.');
 }
 
+/**
+ * Return a student photo as a base64 data URL, read server-side (as the
+ * deployer). Called via google.script.run for study-mode cards so photos load
+ * even where the browser won't send Google cookies to drive.google.com
+ * cross-site (e.g. Safari's tracking prevention on mobile). Returns '' on any
+ * failure so the client just shows a blank card.
+ */
+function getPhoto(fileId) {
+  if (!fileId) return '';
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getThumbnail() || file.getBlob();
+    return 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+  } catch (err) {
+    return '';
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Spreadsheet helpers                                                 */
 /* ------------------------------------------------------------------ */

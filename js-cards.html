@@ -14,8 +14,8 @@
   // opts.showNumber:    append the student-number line (home view).
   // opts.hideClass:     omit the course/period line (shared views, where a
   //                     student spans several classes).
-  // opts.defer:         don't set the image src yet — stash it for loadCardImage
-  //                     to set when the card is shown (study mode, one at a time).
+  // opts.defer:         don't load the photo yet — loadCardImage fetches it via
+  //                     the script (proxy) when the card is shown (study mode).
   // Mirrors views/index.njk and views/study.njk.
   function buildCard(s, opts) {
     opts = opts || {};
@@ -25,9 +25,8 @@
     img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
     img.loading = 'lazy';
     if (s.fileId) {
-      var url = thumbUrl(s.fileId, 400);
-      if (opts.defer) img.dataset.src = url;
-      else img.src = url;
+      if (opts.defer) img.dataset.fileid = s.fileId; // fetched via proxy when shown
+      else img.src = thumbUrl(s.fileId, 400);
     }
     card.appendChild(img);
 
@@ -49,14 +48,58 @@
     return card;
   }
 
-  // Set a deferred card's image src the moment it's shown, so study mode fetches
-  // only the visible card instead of every card up front.
+  // Photos fetched through the script are held in memory by fileId, so card
+  // repeats (Leitner, review re-runs) don't refetch within a session.
+  var PHOTO_CACHE = {};
+
+  function hasServer() {
+    return typeof google !== 'undefined' && google.script && google.script.run;
+  }
+
+  // Load a deferred study card's photo the moment it's shown. Fetched via
+  // google.script.run so it works where the browser blocks cross-site Drive
+  // cookies (e.g. Safari on mobile).
   function loadCardImage(card) {
     if (!card) return;
     var img = card.querySelector('img');
-    if (img && img.dataset && img.dataset.src) {
-      img.src = img.dataset.src;
-      delete img.dataset.src;
+    if (!img || !img.dataset || !img.dataset.fileid) return;
+    var fileId = img.dataset.fileid;
+    delete img.dataset.fileid;
+
+    if (PHOTO_CACHE[fileId]) {
+      img.src = PHOTO_CACHE[fileId];
+      return;
     }
+    if (!hasServer()) return;
+    google.script.run
+      .withSuccessHandler(function (dataUrl) {
+        if (dataUrl) {
+          PHOTO_CACHE[fileId] = dataUrl;
+          img.src = dataUrl;
+        }
+      })
+      .getPhoto(fileId);
+  }
+
+  // Warm the cache in the background, one request at a time, so cards are
+  // usually ready before they're reached.
+  function preloadPhotos(fileIds) {
+    if (!hasServer()) return;
+    var i = 0;
+    function next() {
+      while (i < fileIds.length && (!fileIds[i] || PHOTO_CACHE[fileIds[i]])) i++;
+      if (i >= fileIds.length) return;
+      var fileId = fileIds[i++];
+      google.script.run
+        .withSuccessHandler(function (dataUrl) {
+          if (dataUrl) PHOTO_CACHE[fileId] = dataUrl;
+          next();
+        })
+        .withFailureHandler(function () {
+          next();
+        })
+        .getPhoto(fileId);
+    }
+    next();
   }
 </script>

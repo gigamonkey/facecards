@@ -14,6 +14,8 @@
   // opts.showNumber:    append the student-number line (home view).
   // opts.hideClass:     omit the course/period line (shared views, where a
   //                     student spans several classes).
+  // opts.defer:         don't set the image src yet — stash it for loadCardImage
+  //                     to set when the card is shown (study mode, one at a time).
   // Mirrors views/index.njk and views/study.njk.
   function buildCard(s, opts) {
     opts = opts || {};
@@ -22,7 +24,11 @@
     var img = el('img');
     img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
     img.loading = 'lazy';
-    if (s.fileId) img.src = thumbUrl(s.fileId, 400);
+    if (s.fileId) {
+      var url = thumbUrl(s.fileId, 400);
+      if (opts.defer) img.dataset.src = url;
+      else img.src = url;
+    }
     card.appendChild(img);
 
     var back = el('div', 'back');
@@ -41,5 +47,16 @@
     card.appendChild(back);
 
     return card;
+  }
+
+  // Set a deferred card's image src the moment it's shown, so study mode fetches
+  // only the visible card instead of every card up front.
+  function loadCardImage(card) {
+    if (!card) return;
+    var img = card.querySelector('img');
+    if (img && img.dataset && img.dataset.src) {
+      img.src = img.dataset.src;
+      delete img.dataset.src;
+    }
   }
 </script>

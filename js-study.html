@@ -12,6 +12,7 @@
       if (current === null) {
         currentEl.textContent = state.doneMessage ? state.doneMessage() : 'Done!';
       } else {
+        loadCardImage(current); // fetch this card's photo only now that it's shown
         currentEl.replaceChildren(current);
       }
     }

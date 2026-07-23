@@ -29,7 +29,8 @@ URLs. The study experience (home grid + learn/review modes) is preserved.
 
 ## Access / auth model
 
-Replaces passport + the `emails` allowlist with two gates:
+Replaces passport + the `emails` allowlist with two gates plus a per-viewer
+scoping step:
 
 1. **Deployment gate** — `appsscript.json` sets `webapp.access: "DOMAIN"` and
    `webapp.executeAs: "USER_DEPLOYING"`. Only accounts in the deployer's
@@ -53,6 +54,32 @@ Replaces passport + the `emails` allowlist with two gates:
    `Session.getActiveUser().getEmail()` returns the accessing user's address
    when they're in the same Workspace domain as the script owner, which is our
    case, so this is reliable.
+
+### Per-teacher scoping (each teacher sees only their own sections)
+
+This is a **behavior change from the Express app**, which shows every teacher's
+sections to anyone authorized (`index.njk` loops over all `teachers`). In the
+new app, a signed-in teacher sees **only the sections they teach**.
+
+After the gate, `doGet` scopes the data model to the viewer:
+
+- Match the viewer's email against the `teacherEmail` column (both lowercased).
+  Build the model from **only** the rows where `teacherEmail === viewerEmail`.
+- The home grid, the study scopes, and every deep link therefore cover just the
+  viewer's own classes and students. Nothing belonging to another teacher is
+  sent to the client (not merely hidden in the UI).
+
+This scoping step is exactly the "per-user scoping layer" the v2 volunteer
+feature needs — v1 resolves an email to *the sections that teacher teaches*; v2
+generalizes it to *the sections a viewer is authorized for* (own sections for a
+teacher, assigned sections for a volunteer).
+
+**Edge case — non-teacher `@berkeley.net` viewers.** A staff/admin account (or
+the deployer, if not listed as a teacher in the sheet) matches no
+`teacherEmail`, so scoping yields an empty model — they'd see an empty home
+page. Decide whether that's fine or whether a small `CONFIG.ADMINS` list should
+see all sections. Recommend shipping v1 with the empty-model behavior (simplest;
+the deployer can always inspect data directly) and adding admins only if needed.
 
 **Resource sharing:**
 
@@ -81,8 +108,9 @@ volunteer to a **specific section**, and that volunteer gets a page scoped to
 just that section — the photo grid plus learn/review for that one section, and
 nothing else. That implies future data for section↔volunteer assignments (a
 sheet tab or similar) and a per-user scoping layer in `doGet` that resolves the
-viewer's email to the sections they may see. v1's single full-access model is a
-clean subset of that, so nothing here blocks it.
+viewer's email to the sections they may see. v1 already builds that scoping
+layer for teachers (see "Per-teacher scoping" below); v2 just generalizes the
+email→sections resolution to cover volunteers, so nothing here blocks it.
 
 ## Data model
 
@@ -96,15 +124,20 @@ object keyed by header name (mirrors `loadTSV` in `file-utils.js`).
 
 ### Server-side reduction (port of `index.js:40-66`)
 
-Build the same in-memory structures the Express app built, now inside Code.js:
+Build the same in-memory structures the Express app built, now inside Code.js —
+but **filtered to the viewer's own rows first** (see per-teacher scoping):
 
+- Keep only rows where `row.teacherEmail.toLowerCase() === viewerEmail`.
 - `slugify(course-p-period-teacher)` → `classes[slug]` with `{ ...row, name,
   teacherLast, teacher, students: [] }`.
-- `teachers[teacher]` with `{ name, teacherLast, classes: {}, students: [] }`.
+- `teachers[teacher]` with `{ name, teacherLast, classes: {}, students: [] }`
+  — for a scoped viewer this holds a single teacher (themselves), but keeping
+  the same shape lets the client code and the v2 volunteer scoping reuse it.
 - Join each student to its photo `fileId` (see below) so the client can build
   thumbnail URLs.
 
-The `emails` map is gone — replaced by the domain/email gate above.
+The `emails` map is gone — replaced by the domain/email gate plus the
+per-teacher scoping above.
 
 ### Photos tab (generated)
 
@@ -139,21 +172,29 @@ photos → render a placeholder / blank card.
 
 Single-page app; no server-side page routing (a web app has one fixed URL).
 
-- **`doGet(e)`** authorizes, builds the full data model (teachers/classes/
-  students + fileIds), and injects it as JSON into the page via an
-  `HtmlService.createTemplateFromFile('index')` template (`<?= JSON.stringify(model) ?>`
-  into a `<script>` bootstrap variable). One page load, no extra round trip.
+- **`doGet(e)`** authorizes, builds the data model **scoped to the viewer's own
+  sections** (classes/students + fileIds), and injects it as JSON into the page
+  via an `HtmlService.createTemplateFromFile('index')` template
+  (`<?= JSON.stringify(model) ?>` into a `<script>` bootstrap variable). One
+  page load, no extra round trip. Because the injected model already contains
+  only the viewer's sections, scoping holds even though it's a client-side SPA.
 - **Client-side views** toggle without reload:
-  - **Home** — teacher → class → photo-card grid (port of `index.njk`), using
+  - **Home** — the viewer's classes as photo-card grids (port of `index.njk`,
+    minus the outer per-teacher loop since it's a single teacher), using
     `loading="lazy"` thumbnails so the browser only fetches visible cards.
     Card click flips photo ↔ info (port of `public/js/index.js`).
-  - **Study** — learn/review over a chosen scope (all / class / teacher), port
-    of `study.njk` + `learn.js` / `review.js`.
+  - **Study** — learn/review over a chosen scope, port of `study.njk` +
+    `learn.js` / `review.js`. Scopes reduce to **one class** or **all my
+    students** (the old `/t/:teacher` "a teacher's students" scope collapses to
+    the viewer themselves; a cross-teacher "all students" scope no longer
+    exists).
 - **Deep links / bootstrap state:** `doGet` reads `e.parameter` (e.g.
   `?mode=learn&scope=class&id=<slug>`) and injects an initial route so study
-  views are still shareable, matching today's `/learn/p/:slug` etc. In-app
-  navigation updates the view client-side (and optionally the URL via the web
-  app's query string) without a full reload.
+  views are still shareable, matching today's `/learn/p/:slug` etc. A deep link
+  is still scope-checked: if the `id` names a class the viewer doesn't teach,
+  it's simply absent from their model, so the app falls back to home rather than
+  exposing it. In-app navigation updates the view client-side (and optionally
+  the URL via the web app's query string) without a full reload.
 
 ## Client code: ES modules → Apps Script includes
 
@@ -248,8 +289,13 @@ reference.
 ## Verification
 
 - **Auth**: a `@berkeley.net` account gets in; a `@students.berkeley.net` account
-  is refused; volunteer behavior matches the chosen option.
-- **Data**: teachers/classes/students match the sheet; slugs stable.
+  is refused.
+- **Scoping**: a teacher sees only their own sections (home grid, study scopes,
+  and deep links); another teacher's `class` deep link falls back to home; a
+  non-teacher `@berkeley.net` account gets an empty model (or admin behavior, if
+  that option is taken). Confirm other teachers' rows are absent from the
+  injected JSON, not just hidden.
+- **Data**: the viewer's classes/students match the sheet; slugs stable.
 - **Images**: thumbnails render and cache; missing photos degrade gracefully.
 - **Learn**: Fibonacci-row progression and wrong-answer recycling behave as today.
 - **Review**: single pass then missed-only re-runs; "Perfect run!" on zero misses.

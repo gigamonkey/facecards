@@ -24,6 +24,8 @@ var ADMINS_SHEET = 'admins';
 function doGet(e) {
   e = e || {};
   var params = e.parameter || {};
+  var t0 = new Date().getTime();
+  console.log('doGet params: ' + JSON.stringify(params));
 
   var actual = normalizeEmail(Session.getActiveUser().getEmail());
 
@@ -53,6 +55,7 @@ function doGet(e) {
     st.routeJson = jsonForScript({ mode: 'shared', scope: '', id: '' });
     st.sharedJson = jsonForScript(buildSharedModel(effective, String(params['shared-with'])));
     st.ctxJson = jsonForScript(ctx);
+    logTime('doGet shared-with build', t0);
     return page(st);
   }
 
@@ -64,6 +67,7 @@ function doGet(e) {
     ot.routeJson = jsonForScript({ mode: 'shared-overview', scope: '', id: '' });
     ot.sharedJson = jsonForScript(buildSharedOverview(effective));
     ot.ctxJson = jsonForScript(ctx);
+    logTime('doGet shared-overview build', t0);
     return page(ot);
   }
 
@@ -73,6 +77,7 @@ function doGet(e) {
   if (Object.keys(model.classes).length === 0) {
     var landing = HtmlService.createTemplateFromFile('landing');
     landing.ctx = ctx;
+    logTime('doGet landing build', t0);
     return page(landing);
   }
 
@@ -95,6 +100,7 @@ function doGet(e) {
   t.routeJson = jsonForScript(route);
   t.sharedJson = jsonForScript(null);
   t.ctxJson = jsonForScript(ctx);
+  logTime('doGet build (' + mode + ')', t0);
   return page(t);
 }
 
@@ -472,11 +478,15 @@ function refreshPhotoMap() {
  */
 function getPhoto(fileId) {
   if (!fileId) return '';
+  var t0 = new Date().getTime();
   try {
     var file = DriveApp.getFileById(fileId);
     var blob = file.getThumbnail() || file.getBlob();
-    return 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+    var out = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
+    logTime('getPhoto ' + fileId, t0);
+    return out;
   } catch (err) {
+    logTime('getPhoto ' + fileId + ' FAILED', t0);
     return '';
   }
 }
@@ -491,19 +501,25 @@ function spreadsheet() {
 
 /** Student rows come from the first tab of the spreadsheet. */
 function readStudents() {
-  return sheetToObjects(spreadsheet().getSheets()[0]);
+  var t0 = new Date().getTime();
+  var rows = sheetToObjects(spreadsheet().getSheets()[0]);
+  logTime('readStudents (' + rows.length + ' rows)', t0);
+  return rows;
 }
 
 /** studentNumber -> fileId from the `photos` tab. */
 function readPhotoMap() {
+  var t0 = new Date().getTime();
   var sheet = spreadsheet().getSheetByName(PHOTOS_SHEET);
   var map = {};
-  if (!sheet) return map;
-  sheetToObjects(sheet).forEach(function (r) {
-    if (r.studentNumber !== '' && r.studentNumber != null) {
-      map[String(r.studentNumber)] = String(r.fileId);
-    }
-  });
+  if (sheet) {
+    sheetToObjects(sheet).forEach(function (r) {
+      if (r.studentNumber !== '' && r.studentNumber != null) {
+        map[String(r.studentNumber)] = String(r.fileId);
+      }
+    });
+  }
+  logTime('readPhotoMap (' + Object.keys(map).length + ' photos)', t0);
   return map;
 }
 
@@ -515,15 +531,18 @@ function readPhotoMap() {
  * "email@berkeley.net", which matches nobody's login and is harmless.)
  */
 function readAdmins() {
+  var t0 = new Date().getTime();
   var sheet = spreadsheet().getSheetByName(ADMINS_SHEET);
   var out = new Set();
-  if (!sheet) return out;
-  sheet.getDataRange().getValues().forEach(function (row) {
-    row.forEach(function (cell) {
-      var email = qualifyEmail(cell);
-      if (isEmailShaped(email)) out.add(email);
+  if (sheet) {
+    sheet.getDataRange().getValues().forEach(function (row) {
+      row.forEach(function (cell) {
+        var email = qualifyEmail(cell);
+        if (isEmailShaped(email)) out.add(email);
+      });
     });
-  });
+  }
+  logTime('readAdmins', t0);
   return out;
 }
 
@@ -590,10 +609,13 @@ function jsonForScript(obj) {
 }
 
 function page(template) {
-  return template
+  var t0 = new Date().getTime();
+  var out = template
     .evaluate()
     .setTitle('Facecards')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  logTime('page.evaluate', t0);
+  return out;
 }
 
 function getBaseUrl() {
@@ -602,4 +624,10 @@ function getBaseUrl() {
   } catch (err) {
     return '';
   }
+}
+
+// Timing helper — logs to Cloud Logging (visible in the Apps Script Executions
+// panel and Logs Explorer). Call with a start time from new Date().getTime().
+function logTime(label, t0) {
+  console.log(label + ': ' + (new Date().getTime() - t0) + ' ms');
 }

@@ -152,13 +152,9 @@
     margin-top: 1em;
   }
   #study-header {
-    display: flex;
-    gap: 0.75em;
-    align-items: center;
-    padding: 0.75em;
-  }
-  #study-header a {
-    cursor: pointer;
+    margin: 0.4em 0 0.2em;
+    font-size: clamp(18px, 4vmin, 26px);
+    font-weight: 400;
   }
   #current {
     display: flex;
@@ -166,6 +162,15 @@
     flex-direction: row;
     justify-content: center;
     align-items: center;
+  }
+  /* Bigger photos in study mode than in the home grid. */
+  body.view-study .card {
+    width: auto;
+  }
+  body.view-study .card img {
+    width: 320px;
+    max-width: 90%;
+    height: auto;
   }
   #instructions {
     font-style: italic;
@@ -395,13 +400,15 @@
     body.view-home div.faces {
       display: none;
     }
-    body.view-study h1 {
-      font-size: 12px;
-    }
     /* On mobile the full instructions are hidden behind a "?" button that toggles
-       a short touch-specific tip. */
+       a short touch-specific tip. Photos take most of the width. */
     body.view-study {
+      width: 100vw;
       padding-bottom: 0;
+    }
+    body.view-study .card img {
+      width: 90vw;
+      max-width: 90vw;
     }
     body.view-study #instructions {
       display: none;

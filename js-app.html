@@ -87,12 +87,10 @@
     }
 
     function titleFor(mode, scope, id) {
-      var verb = mode === 'learn' ? 'Learn' : 'Review';
       if (scope === 'class' && MODEL.classes[id]) {
-        var c = MODEL.classes[id];
-        return verb + ': ' + c.name;
+        return MODEL.classes[id].name;
       }
-      return verb + ': all my students';
+      return 'All my students';
     }
 
     function showStudy(mode, scope, id) {
@@ -106,9 +104,9 @@
       setView('study');
       app.innerHTML = '';
 
-      var header = el('div');
+      var header = el('h1');
       header.id = 'study-header';
-      header.appendChild(el('span', null, titleFor(mode, scope, id)));
+      header.textContent = titleFor(mode, scope, id);
 
       var current = el('div');
       current.id = 'current';

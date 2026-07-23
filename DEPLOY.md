@@ -136,8 +136,11 @@ Open the `…/exec` URL and check:
 
 ## 7. Day-to-day
 
-- **New/updated photos:** upload to the folder, then run `refreshPhotoMap` (§5).
-- **Add/remove an admin:** edit the `admins` tab — no redeploy needed.
+- **New/updated photos:** upload to the folder, then run `refreshPhotoMap` (§5)
+  — it also clears the cache, so the changes show up immediately.
+- **Edited the roster or `admins` tab:** run `clearCaches` from the editor so the
+  change appears right away. (Per-viewer data is cached for up to an hour, so
+  without this the edit still takes effect within the hour on its own.)
 - **Impersonate a user** (admins only): append `?as=teacher@berkeley.net` to the
   app URL to see exactly what that teacher sees, or use the "view as" box in the
   admin banner. A non-admin passing `?as=` is ignored.

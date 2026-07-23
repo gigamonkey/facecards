@@ -115,6 +115,12 @@ function include(name) {
  * by slug and each student is joined to its photo fileId.
  */
 function buildModel(email) {
+  return cached('model:' + email, function () {
+    return buildModelUncached(email);
+  });
+}
+
+function buildModelUncached(email) {
   var rows = readStudents().filter(function (r) {
     return normalizeEmail(r.teacherEmail) === email;
   });
@@ -180,6 +186,12 @@ function buildModel(email) {
  * teacher can't be found.
  */
 function buildSharedModel(currentEmail, param) {
+  return cached('sharedwith:' + currentEmail + ':' + normalizeEmail(param), function () {
+    return buildSharedModelUncached(currentEmail, param);
+  });
+}
+
+function buildSharedModelUncached(currentEmail, param) {
   var rows = readStudents();
   var photos = readPhotoMap();
 
@@ -349,6 +361,12 @@ function minPeriod(list) {
  * are sorted by last name; students within each by last then first name.
  */
 function buildSharedOverview(currentEmail) {
+  return cached('overview:' + currentEmail, function () {
+    return buildSharedOverviewUncached(currentEmail);
+  });
+}
+
+function buildSharedOverviewUncached(currentEmail) {
   var rows = readStudents();
   var photos = readPhotoMap();
 
@@ -467,6 +485,7 @@ function refreshPhotoMap() {
   sheet.getRange(1, 1, 1, 2).setValues([['studentNumber', 'fileId']]);
   if (rows.length) sheet.getRange(2, 1, rows.length, 2).setValues(rows);
   Logger.log('Wrote ' + rows.length + ' photo rows to the "' + PHOTOS_SHEET + '" tab.');
+  clearCaches(); // new photos should show up immediately
 }
 
 /**
@@ -531,19 +550,22 @@ function readPhotoMap() {
  * "email@berkeley.net", which matches nobody's login and is harmless.)
  */
 function readAdmins() {
-  var t0 = new Date().getTime();
-  var sheet = spreadsheet().getSheetByName(ADMINS_SHEET);
-  var out = new Set();
-  if (sheet) {
-    sheet.getDataRange().getValues().forEach(function (row) {
-      row.forEach(function (cell) {
-        var email = qualifyEmail(cell);
-        if (isEmailShaped(email)) out.add(email);
+  var emails = cached('admins', function () {
+    var t0 = new Date().getTime();
+    var sheet = spreadsheet().getSheetByName(ADMINS_SHEET);
+    var out = [];
+    if (sheet) {
+      sheet.getDataRange().getValues().forEach(function (row) {
+        row.forEach(function (cell) {
+          var email = qualifyEmail(cell);
+          if (isEmailShaped(email)) out.push(email);
+        });
       });
-    });
-  }
-  logTime('readAdmins', t0);
-  return out;
+    }
+    logTime('readAdmins', t0);
+    return out;
+  });
+  return new Set(emails);
 }
 
 /** Read a sheet into an array of objects keyed by the header row. */
@@ -630,4 +652,52 @@ function getBaseUrl() {
 // panel and Logs Explorer). Call with a start time from new Date().getTime().
 function logTime(label, t0) {
   console.log(label + ': ' + (new Date().getTime() - t0) + ' ms');
+}
+
+/* ------------------------------------------------------------------ */
+/* Caching                                                             */
+/*                                                                     */
+/* The roster sheet is large (tens of thousands of rows), so reading   */
+/* it on every page load is slow. We memoize derived, per-viewer data  */
+/* in the script cache. A version token (a script property) lets us    */
+/* invalidate everything at once — bumped by refreshPhotoMap and by    */
+/* clearCaches() (run the latter after editing the roster).            */
+/* ------------------------------------------------------------------ */
+
+var CACHE_TTL = 3600; // seconds
+var _cacheVersion = null;
+
+function cacheVersion() {
+  if (_cacheVersion === null) {
+    _cacheVersion = PropertiesService.getScriptProperties().getProperty('CACHE_VERSION') || '0';
+  }
+  return _cacheVersion;
+}
+
+/** Memoize a JSON-able value under a version-prefixed key in the script cache. */
+function cached(key, fn) {
+  var cache = CacheService.getScriptCache();
+  var full = 'v' + cacheVersion() + ':' + key;
+  var hit = cache.get(full);
+  if (hit !== null) {
+    console.log('cache hit: ' + key);
+    return JSON.parse(hit);
+  }
+  var val = fn();
+  var json = JSON.stringify(val);
+  if (json.length < 100000) {
+    cache.put(full, json, CACHE_TTL);
+  } else {
+    console.log('cache skip (' + json.length + ' bytes): ' + key);
+  }
+  return val;
+}
+
+/** Invalidate all cached models/admins. Run after editing the roster. */
+function clearCaches() {
+  var props = PropertiesService.getScriptProperties();
+  var next = String(Number(props.getProperty('CACHE_VERSION') || '0') + 1);
+  props.setProperty('CACHE_VERSION', next);
+  _cacheVersion = next;
+  console.log('Caches cleared (version ' + next + ').');
 }

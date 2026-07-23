@@ -16,8 +16,8 @@
   //                     student spans several classes).
   // opts.defer:         don't load the photo yet — loadCardImage fetches it via
   //                     the script (proxy) when the card is shown (study mode).
-  // opts.initialsAlt:   alt text is just the student's initials, not their name,
-  //                     so a not-yet-loaded study card doesn't reveal the answer.
+  // opts.loadingAlt:    alt is "Loading…" (not the name or initials) so a study
+  //                     card doesn't reveal the answer before its photo loads.
   // Mirrors views/index.njk and views/study.njk.
   function initials(s) {
     return ((s.firstName || '').charAt(0) + (s.lastName || '').charAt(0)).toUpperCase();
@@ -29,7 +29,7 @@
 
     if (s.fileId) {
       var img = el('img');
-      img.alt = opts.initialsAlt ? initials(s) : (s.firstName || '') + ' ' + (s.lastName || '');
+      img.alt = opts.loadingAlt ? 'Loading…' : (s.firstName || '') + ' ' + (s.lastName || '');
       img.loading = 'lazy';
       if (opts.defer) img.dataset.fileid = s.fileId; // fetched via proxy when shown
       else img.src = thumbUrl(s.fileId, 400);

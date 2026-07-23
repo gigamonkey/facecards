@@ -86,12 +86,13 @@ Instead of an empty home page, render a **simple landing page**:
 Admins can view the app **as any user** to see exactly what that user would see,
 via a query param — e.g. `…/exec?as=teacher@berkeley.net`.
 
-- **Who's an admin:** `CONFIG.ADMINS` (comma-separated), containing
-  `peterseibel@berkeley.net`.
+- **Who's an admin:** read from an `admins` tab in the spreadsheet (see Data
+  model), so the list can be edited after deploy without a code change. Seeded
+  with `peterseibel@berkeley.net`.
 - **Resolution in `doGet`:** compute the effective email used for scoping —
   ```js
   const actual = (Session.getActiveUser().getEmail() || '').toLowerCase();
-  const isAdmin = CONFIG.ADMINS.split(',').map(s => s.trim().toLowerCase()).includes(actual);
+  const isAdmin = readAdmins().has(actual);            // readAdmins() → Set from the admins tab
   const effective = (isAdmin && e.parameter.as) ? e.parameter.as.toLowerCase() : actual;
   ```
   Everything downstream (scoping, model, landing page) keys off `effective`.
@@ -100,10 +101,11 @@ via a query param — e.g. `…/exec?as=teacher@berkeley.net`.
   be enforced server-side (it is, above — `effective` falls back to `actual`).
 - Impersonating a user with no sections correctly shows *that user's* landing
   page — that's the point of "see what they'd see."
-- Show a small **"viewing as &lt;email&gt;"** banner when impersonating so the
-  admin knows the view isn't their own. Peter's own account has no sections, so
-  without `?as=` he lands on the no-sections page; that page can carry an admin
-  hint about the `?as=` param.
+- An admin **without** `?as=` sees their own sections normally (admins can also
+  be teachers — Peter has sections). To impersonate, they add `?as=`; show a
+  small **"viewing as &lt;email&gt;"** banner while impersonating, ideally with a
+  "back to my view" link that drops the param. An optional admin-only "view as…"
+  control in the UI can set the param without hand-editing the URL.
 
 **Resource sharing:**
 
@@ -192,6 +194,13 @@ which is itself a manual upload process, so no automation is needed. `doGet`
 reads the `photos` tab and builds `studentNumber → fileId` for the join. Missing
 photos → render a placeholder / blank card.
 
+### Admins tab
+
+A small tab named `admins` with one email per row (header `email`).
+`readAdmins()` reads it into a lowercased `Set` used for the impersonation check.
+Kept in the sheet (not `config.js`) so the admin list can be edited after deploy
+without touching code. Seed it with `peterseibel@berkeley.net`.
+
 ## Rendering & routing
 
 Single-page app; no server-side page routing (a web app has one fixed URL).
@@ -256,8 +265,9 @@ so each current `public/js/*.js` module becomes a `.html` partial wrapping a
 
 - `SPREADSHEET_ID` — the student spreadsheet.
 - `DRIVE_FOLDER_ID` — the photos folder.
-- `ADMINS` — comma-separated admin emails (at least `peterseibel@berkeley.net`);
-  admins may impersonate via `?as=`.
+
+(The admin list lives in the `admins` sheet tab, not config, so it's editable
+after deploy.)
 
 Accessed in server code as `CONFIG.SPREADSHEET_ID`, etc. `config.js` is pushed
 with the code and lives in git (fine for IDs, not secrets — there are none here).
@@ -278,10 +288,11 @@ the `convert` branch.
    (Run as the `berkeley.net` clasp account.)
 4. **Configure resources:**
    ```bash
-   hug config set SPREADSHEET_ID=<id> DRIVE_FOLDER_ID=<id> ADMINS=peterseibel@berkeley.net
+   hug config set SPREADSHEET_ID=<id> DRIVE_FOLDER_ID=<id>
    ```
 5. **Populate the photos tab:** run `refreshPhotoMap` once (Apps Script editor).
-6. **Deploy:**
+6. **Seed the admins tab:** add an `admins` tab with `peterseibel@berkeley.net`.
+7. **Deploy:**
    ```bash
    hug deploy "initial Apps Script web app"
    ```
@@ -329,10 +340,12 @@ page), `js-dom.html`, `js-random.html`, `js-home.html`, `js-learn.html`,
   Confirm other teachers' rows are absent from the injected JSON, not just hidden.
 - **No-sections landing**: a `@berkeley.net` account with no sections sees the
   "contact Mr. Seibel" page, not an empty home or an error.
-- **Impersonation**: an admin with `?as=<teacher>` sees that teacher's sections
-  (and the banner); an admin with `?as=<no-sections user>` sees the landing
-  page; a **non-admin** passing `?as=` is ignored and sees only their own
-  sections (verify server-side, not just UI).
+- **Impersonation**: an admin **without** `?as=` sees their own sections; an
+  admin with `?as=<teacher>` sees that teacher's sections (and the banner); an
+  admin with `?as=<no-sections user>` sees the landing page; a **non-admin**
+  passing `?as=` is ignored and sees only their own sections (verify
+  server-side, not just UI). Editing the `admins` tab changes who's an admin
+  without redeploying.
 - **Data**: the viewer's classes/students match the sheet; slugs stable.
 - **Images**: thumbnails render and cache; missing photos degrade gracefully.
 - **Learn**: Fibonacci-row progression and wrong-answer recycling behave as today.

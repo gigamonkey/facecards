@@ -315,8 +315,16 @@
     body.view-study h1 {
       font-size: 12px;
     }
-    #instructions {
-      display: none;
+    /* On mobile, show the instructions in normal flow at the bottom rather than
+       as a fixed footer (avoids overlap on small screens). */
+    body.view-study {
+      padding-bottom: 0;
+    }
+    body.view-study #instructions {
+      position: static;
+      transform: none;
+      width: auto;
+      margin: 1em;
     }
   }
 </style>

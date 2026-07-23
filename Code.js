@@ -27,7 +27,9 @@ function doGet(e) {
   var t0 = new Date().getTime();
   console.log('doGet params: ' + JSON.stringify(params));
 
+  var tStep = new Date().getTime();
   var actual = normalizeEmail(Session.getActiveUser().getEmail());
+  logTime('  getActiveUser', tStep);
 
   if (!isBerkeleyStaff(actual)) {
     return HtmlService.createHtmlOutput(
@@ -35,17 +37,22 @@ function doGet(e) {
     ).setTitle('Facecards');
   }
 
+  tStep = new Date().getTime();
   var isAdmin = readAdmins().has(actual);
+  logTime('  readAdmins', tStep);
   var asParam = isAdmin && params.as ? qualifyEmail(params.as) : '';
   var effective = asParam || actual;
   var impersonating = effective !== actual;
 
+  tStep = new Date().getTime();
+  var baseUrl = getBaseUrl();
+  logTime('  getBaseUrl', tStep);
   var ctx = {
     actual: actual,
     effective: effective,
     impersonating: impersonating,
     isAdmin: isAdmin,
-    baseUrl: getBaseUrl(),
+    baseUrl: baseUrl,
   };
 
   // Shared-with view: a table of students the viewer shares with another teacher.

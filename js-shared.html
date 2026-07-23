@@ -241,13 +241,10 @@
   function buildSharedCard(s, shared) {
     var card = el('div', 'swipe-card');
 
-    if (s.fileId) {
-      var img = el('img');
-      img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
-      img.dataset.fileid = s.fileId; // proxy-loaded when shown
-      card.appendChild(img);
-    } else {
+    if (!s.fileId) {
       card.appendChild(el('div', 'initials', initials(s)));
+    } else {
+      card.appendChild(loadingBox(s.fileId)); // proxy-loaded, swapped in when shown
     }
 
     var info = el('div', 'swipe-info');

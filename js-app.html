@@ -118,12 +118,7 @@
       app.appendChild(current);
 
       var cards = students.map(function (s) {
-        return buildCard(s, {
-          showNumber: false,
-          nameWithFirst: true,
-          defer: true,
-          loadingAlt: true,
-        });
+        return buildCard(s, { showNumber: false, nameWithFirst: true, defer: true });
       });
 
       var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);

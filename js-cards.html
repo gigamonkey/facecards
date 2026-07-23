@@ -14,10 +14,9 @@
   // opts.showNumber:    append the student-number line (home view).
   // opts.hideClass:     omit the course/period line (shared views, where a
   //                     student spans several classes).
-  // opts.defer:         don't load the photo yet — loadCardImage fetches it via
-  //                     the script (proxy) when the card is shown (study mode).
-  // opts.loadingAlt:    alt is "Loading…" (not the name or initials) so a study
-  //                     card doesn't reveal the answer before its photo loads.
+  // opts.defer:         don't load the photo yet — show a "Loading…" box that
+  //                     loadCardImage swaps for the proxied photo when the card
+  //                     is shown (study mode), so the answer stays hidden.
   // Mirrors views/index.njk and views/study.njk.
   function initials(s) {
     return ((s.firstName || '').charAt(0) + (s.lastName || '').charAt(0)).toUpperCase();
@@ -27,15 +26,16 @@
     opts = opts || {};
     var card = el('div', 'card');
 
-    if (s.fileId) {
-      var img = el('img');
-      img.alt = opts.loadingAlt ? 'Loading…' : (s.firstName || '') + ' ' + (s.lastName || '');
-      img.loading = 'lazy';
-      if (opts.defer) img.dataset.fileid = s.fileId; // fetched via proxy when shown
-      else img.src = thumbUrl(s.fileId, 400);
-      card.appendChild(img);
-    } else {
+    if (!s.fileId) {
       card.appendChild(el('div', 'initials', initials(s))); // no photo → initials box
+    } else if (opts.defer) {
+      card.appendChild(loadingBox(s.fileId)); // study — swapped for the photo on show
+    } else {
+      var img = el('img');
+      img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+      img.loading = 'lazy';
+      img.src = thumbUrl(s.fileId, 400);
+      card.appendChild(img);
     }
 
     var back = el('div', 'back');
@@ -56,6 +56,14 @@
     return card;
   }
 
+  // A "Loading…" placeholder for a deferred photo; loadCardImage swaps it for
+  // the real image once fetched.
+  function loadingBox(fileId) {
+    var box = el('div', 'loading', 'Loading…');
+    box.dataset.fileid = fileId;
+    return box;
+  }
+
   // Photos fetched through the script are held in memory by fileId, so card
   // repeats (Leitner, review re-runs) don't refetch within a session.
   var PHOTO_CACHE = {};
@@ -64,27 +72,32 @@
     return typeof google !== 'undefined' && google.script && google.script.run;
   }
 
-  // Load a deferred study card's photo the moment it's shown. Fetched via
-  // google.script.run so it works where the browser blocks cross-site Drive
-  // cookies (e.g. Safari on mobile).
+  // When a deferred card is shown, replace its "Loading…" box with the photo,
+  // fetched via google.script.run so it works where the browser blocks
+  // cross-site Drive cookies (e.g. Safari on mobile). Cached by fileId.
   function loadCardImage(card) {
     if (!card) return;
-    var img = card.querySelector('img');
-    if (!img || !img.dataset || !img.dataset.fileid) return;
-    var fileId = img.dataset.fileid;
-    delete img.dataset.fileid;
+    var box = card.querySelector('.loading');
+    if (!box || !box.dataset || !box.dataset.fileid) return;
+    var fileId = box.dataset.fileid;
+    delete box.dataset.fileid;
+
+    function swap(dataUrl) {
+      if (!dataUrl || !box.parentNode) return;
+      var img = el('img');
+      img.src = dataUrl;
+      box.parentNode.replaceChild(img, box);
+    }
 
     if (PHOTO_CACHE[fileId]) {
-      img.src = PHOTO_CACHE[fileId];
+      swap(PHOTO_CACHE[fileId]);
       return;
     }
     if (!hasServer()) return;
     google.script.run
       .withSuccessHandler(function (dataUrl) {
-        if (dataUrl) {
-          PHOTO_CACHE[fileId] = dataUrl;
-          img.src = dataUrl;
-        }
+        if (dataUrl) PHOTO_CACHE[fileId] = dataUrl;
+        swap(dataUrl);
       })
       .getPhoto(fileId);
   }

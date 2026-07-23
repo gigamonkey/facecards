@@ -46,6 +46,23 @@
     width: 100%;
     font-size: min(22vw, 6rem);
   }
+  /* "Loading…" placeholder while a deferred photo is fetched. */
+  .loading {
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    background: #dde;
+    color: #667;
+    font-style: italic;
+    font-size: 1.3rem;
+  }
+  .swipe-card .loading {
+    width: 60vw;
+    max-width: 260px;
+  }
   .swipe-card .initials {
     width: 60vw;
     max-width: 260px;

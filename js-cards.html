@@ -12,6 +12,8 @@
 
   // opts.nameWithFirst: nickname line reads "Nick (First)" (study view).
   // opts.showNumber:    append the student-number line (home view).
+  // opts.hideClass:     omit the course/period line (shared views, where a
+  //                     student spans several classes).
   // Mirrors views/index.njk and views/study.njk.
   function buildCard(s, opts) {
     opts = opts || {};
@@ -32,7 +34,9 @@
     back.appendChild(el('p', 'name', nameText));
     back.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
     back.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
-    back.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
+    if (!opts.hideClass) {
+      back.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
+    }
     if (opts.showNumber) back.appendChild(el('p', null, String(s.studentNumber)));
     card.appendChild(back);
 

@@ -56,6 +56,17 @@ function doGet(e) {
     return page(st);
   }
 
+  // Shared overview: every teacher the viewer shares students with, each with a
+  // face grid linking to that teacher's shared-with page.
+  if (params.shared !== undefined) {
+    var ot = HtmlService.createTemplateFromFile('index');
+    ot.modelJson = jsonForScript({ teacherLast: '', classes: {} });
+    ot.routeJson = jsonForScript({ mode: 'shared-overview', scope: '', id: '' });
+    ot.sharedJson = jsonForScript(buildSharedOverview(effective));
+    ot.ctxJson = jsonForScript(ctx);
+    return page(ot);
+  }
+
   var model = buildModel(effective);
 
   // No sections for this viewer -> landing page.
@@ -315,6 +326,79 @@ function minPeriod(list) {
   return list.reduce(function (m, c) {
     return Math.min(m, periodNum(c.period));
   }, Infinity);
+}
+
+/**
+ * Build the shared-overview model for a viewer: every other teacher who shares
+ * at least one student with them, each with the list of shared students. The
+ * `key` (email username) links to that teacher's ?shared-with= page. Teachers
+ * are sorted by last name; students within each by last then first name.
+ */
+function buildSharedOverview(currentEmail) {
+  var rows = readStudents();
+  var photos = readPhotoMap();
+
+  var teachersOf = {}; // studentNumber -> Set(teacherEmail)
+  var info = {}; // studentNumber -> identity fields
+
+  rows.forEach(function (s) {
+    var email = normalizeEmail(s.teacherEmail);
+    if (!email) return;
+    var num = String(s.studentNumber);
+    (teachersOf[num] = teachersOf[num] || new Set()).add(email);
+    if (!info[num]) {
+      info[num] = {
+        studentNumber: num,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        nickname: s.nickname,
+        grade: s.grade,
+        gender: s.gender,
+        fileId: photos[num] || '',
+      };
+    }
+  });
+
+  // For each of the viewer's students, add them under every other teacher who
+  // also teaches them.
+  var byTeacher = {}; // otherEmail -> [studentNumber]
+  Object.keys(teachersOf).forEach(function (num) {
+    var set = teachersOf[num];
+    if (!set.has(currentEmail)) return;
+    set.forEach(function (email) {
+      if (email === currentEmail) return;
+      (byTeacher[email] = byTeacher[email] || []).push(num);
+    });
+  });
+
+  var teachers = Object.keys(byTeacher).map(function (email) {
+    var names = teacherNames(rows, new Set([email]));
+    var students = byTeacher[email]
+      .map(function (num) {
+        return info[num];
+      })
+      .sort(function (a, b) {
+        return (
+          String(a.lastName).localeCompare(String(b.lastName)) ||
+          String(a.firstName).localeCompare(String(b.firstName))
+        );
+      });
+    return {
+      key: email.replace(/@.*$/, ''), // username → ?shared-with=<key>
+      last: names.last,
+      full: names.full,
+      students: students,
+    };
+  });
+
+  teachers.sort(function (a, b) {
+    return (
+      String(a.last).localeCompare(String(b.last)) ||
+      String(a.full).localeCompare(String(b.full))
+    );
+  });
+
+  return { teachers: teachers };
 }
 
 /**

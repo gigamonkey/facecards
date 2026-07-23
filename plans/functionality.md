@@ -41,6 +41,10 @@ live; unchecked items are planned.
       their class(es) — sorted by your period, then theirs, then last then first
       name (the teacher is matched by last name, username, or full email)
 
+- [x] `?shared` shows an overview: every teacher the current teacher shares
+      students with, each as a face grid, with the teacher's name linking to
+      their `?shared-with=` page
+
 ## Study modes
 
 - [x] One card shown at a time; press a key or tap to reveal the back, then

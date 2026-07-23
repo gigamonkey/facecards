@@ -78,4 +78,46 @@
     });
     return td;
   }
+
+  // Render the ?shared overview: one section per teacher the viewer shares
+  // students with — the teacher's name (linked to their ?shared-with= page) and
+  // a face grid of the shared students.
+  function renderSharedOverview(container, data) {
+    container.innerHTML = '';
+    var wrap = el('div');
+    wrap.id = 'shared-overview';
+
+    var baseUrl = (window.CTX && CTX.baseUrl) || '';
+    var home = el('a', 'home-link', '← Home');
+    home.href = baseUrl || '#';
+    if (baseUrl) home.target = '_top';
+    wrap.appendChild(home);
+
+    wrap.appendChild(el('h1', null, 'Shared students'));
+
+    if (!data || !data.teachers.length) {
+      wrap.appendChild(el('p', null, 'You don’t share any students with another teacher.'));
+      container.appendChild(wrap);
+      return;
+    }
+
+    data.teachers.forEach(function (t) {
+      var h2 = el('h2');
+      var link = el('a', null, t.full || t.last || t.key);
+      link.href = baseUrl + '?shared-with=' + encodeURIComponent(t.key);
+      if (baseUrl) link.target = '_top';
+      h2.appendChild(link);
+      wrap.appendChild(h2);
+
+      var faces = el('div', 'faces');
+      t.students.forEach(function (s) {
+        var card = buildCard(s, { showNumber: true, nameWithFirst: false, hideClass: true });
+        attachFlip(card);
+        faces.appendChild(card);
+      });
+      wrap.appendChild(faces);
+    });
+
+    container.appendChild(wrap);
+  }
 </script>

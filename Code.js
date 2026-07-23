@@ -703,14 +703,16 @@ var CHUNK_SIZE = 90000; // under CacheService's 100KB-per-key limit
 
 /** Memoize a large JSON-able value, split across chunk keys. */
 function cachedBig(key, fn) {
+  var t0 = new Date().getTime();
   var raw = readChunks(key);
   if (raw !== null) {
-    console.log('cache hit (big): ' + key);
-    return JSON.parse(raw);
+    var val = JSON.parse(raw);
+    logTime('cache hit (big) ' + key + ' (' + raw.length + ' bytes)', t0);
+    return val;
   }
-  var val = fn();
-  writeChunks(key, JSON.stringify(val));
-  return val;
+  var built = fn();
+  writeChunks(key, JSON.stringify(built));
+  return built;
 }
 
 function readChunks(key) {

@@ -139,8 +139,12 @@ Open the `…/exec` URL and check:
 - **New/updated photos:** upload to the folder, then run `refreshPhotoMap` (§5)
   — it also clears the cache, so the changes show up immediately.
 - **Edited the roster or `admins` tab:** run `clearCaches` from the editor so the
-  change appears right away. (Per-viewer data is cached for up to an hour, so
-  without this the edit still takes effect within the hour on its own.)
+  change appears right away. (Data is cached for up to 6 hours, so without this
+  the edit still takes effect within that window on its own.)
+- **Keep it fast (recommended):** add a time-driven trigger for `warmData` so the
+  expensive roster rebuild happens in the background, not on a user's page load.
+  In the editor: **Triggers** (clock icon) → **Add Trigger** → function
+  `warmData`, event source **Time-driven**, **Hour timer**, **Every hour**.
 - **Impersonate a user** (admins only): append `?as=teacher@berkeley.net` to the
   app URL to see exactly what that teacher sees, or use the "view as" box in the
   admin banner. A non-admin passing `?as=` is ignored.

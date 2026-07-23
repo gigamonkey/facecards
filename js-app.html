@@ -123,6 +123,13 @@
         input.type = 'text';
         input.placeholder = 'teacher (or full email)';
         input.required = true;
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            if (form.requestSubmit) form.requestSubmit();
+            else form.submit();
+          }
+        });
         label.appendChild(input);
         form.appendChild(label);
         form.appendChild(el('button', null, 'Go'));

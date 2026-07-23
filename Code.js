@@ -589,7 +589,7 @@ function logTime(label, t0) {
 /* clearCaches() (run the latter after editing the roster).            */
 /* ------------------------------------------------------------------ */
 
-var CACHE_TTL = 3600; // seconds
+var CACHE_TTL = 21600; // seconds (6h — the max; version-busted on data edits)
 var _cacheVersion = null;
 
 function cacheVersion() {
@@ -749,4 +749,17 @@ function clearCaches() {
   props.setProperty('CACHE_VERSION', next);
   _cacheVersion = next;
   console.log('Caches cleared (version ' + next + ').');
+}
+
+/**
+ * Rebuild the normalized data blob so users never pay the cold ~5–7s build.
+ * Bumps the version (invalidating stale per-viewer caches) then warms the blob.
+ * Put this on a time-driven trigger (e.g. hourly) via the Apps Script editor's
+ * Triggers panel.
+ */
+function warmData() {
+  var t0 = new Date().getTime();
+  clearCaches();
+  getData(); // reads the sheet and caches the fresh blob under the new version
+  logTime('warmData', t0);
 }

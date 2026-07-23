@@ -123,9 +123,31 @@
         'the card. When the back is showing, press right arrow (or swipe right) ' +
         'if you got it right and left arrow (swipe left) if you got it wrong.';
 
+      // Mobile only (CSS-gated): a "?" button that toggles a short touch tip.
+      var helpPanel = el('div', 'help-panel');
+      helpPanel.textContent =
+        'Tap the card to reveal the name, then swipe right if you got it or left if you missed it.';
+      var help = el('button', 'help-toggle', '?');
+      help.setAttribute('type', 'button');
+      help.setAttribute('aria-label', 'Instructions');
+      help.addEventListener('click', function (e) {
+        e.stopPropagation();
+        helpPanel.classList.toggle('show');
+      });
+      // Keep taps on the button/panel from reaching the card's touch handlers.
+      ['touchstart', 'touchend'].forEach(function (evt) {
+        var stop = function (e) {
+          e.stopPropagation();
+        };
+        help.addEventListener(evt, stop);
+        helpPanel.addEventListener(evt, stop);
+      });
+
       app.appendChild(header);
       app.appendChild(current);
       app.appendChild(instructions);
+      app.appendChild(helpPanel);
+      app.appendChild(help);
 
       var cards = students.map(function (s) {
         return buildCard(s, { showNumber: false, nameWithFirst: true, defer: true });

@@ -165,6 +165,11 @@
     width: calc(min(40em, 80%));
     margin: 0;
   }
+  /* Mobile "?" help toggle + panel — hidden on desktop (footer shows instead). */
+  .help-toggle,
+  .help-panel {
+    display: none;
+  }
 
   /* ---- Shared-with table view ---- */
   body.view-shared {
@@ -315,16 +320,48 @@
     body.view-study h1 {
       font-size: 12px;
     }
-    /* On mobile, show the instructions in normal flow at the bottom rather than
-       as a fixed footer (avoids overlap on small screens). */
+    /* On mobile the full instructions are hidden behind a "?" button that toggles
+       a short touch-specific tip. */
     body.view-study {
       padding-bottom: 0;
     }
     body.view-study #instructions {
-      position: static;
-      transform: none;
-      width: auto;
-      margin: 1em;
+      display: none;
+    }
+    body.view-study .help-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      right: 0.8em;
+      bottom: 0.8em;
+      width: 2.4em;
+      height: 2.4em;
+      padding: 0;
+      border-radius: 50%;
+      border: 1px solid #445;
+      background: #ddf;
+      color: #113;
+      font-size: 1.4em;
+      line-height: 1;
+      cursor: pointer;
+      z-index: 1000;
+    }
+    body.view-study .help-panel.show {
+      display: block;
+      position: fixed;
+      right: 0.8em;
+      bottom: 4em;
+      max-width: 75%;
+      margin: 0;
+      background: #ddd;
+      border: 1px dotted black;
+      border-radius: 8px;
+      padding: 1em;
+      font-style: italic;
+      font-size: 0.95em;
+      text-align: left;
+      z-index: 1000;
     }
   }
 </style>

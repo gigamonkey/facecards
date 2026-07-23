@@ -248,6 +248,11 @@
     width: 100%;
     max-width: 30em;
   }
+  /* Clear the fixed admin/impersonation banner (other views have enough top
+     margin already; the swipe view starts at the top). */
+  body.has-banner.view-shared-swipe {
+    padding-top: 4em;
+  }
   #shared-swipe .home-link {
     display: block;
     text-align: left;

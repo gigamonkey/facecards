@@ -13,9 +13,10 @@
     var teardownStudy = null;
 
     renderBanner();
+    var bannerShown = !!(banner && banner.children.length);
 
     function setView(name) {
-      document.body.className = 'view-' + name;
+      document.body.className = 'view-' + name + (bannerShown ? ' has-banner' : '');
     }
 
     function isMobile() {

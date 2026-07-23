@@ -124,4 +124,143 @@
 
     container.appendChild(wrap);
   }
+
+  // ---- Mobile shared UI ----
+
+  // Mobile ?shared: a plain list of teachers + shared-student counts (the face
+  // grids are hidden/heavy on phones). Each name links to the swipe view.
+  function renderSharedList(container, data) {
+    container.innerHTML = '';
+    var wrap = el('div');
+    wrap.id = 'shared-list';
+
+    var baseUrl = (window.CTX && window.CTX.baseUrl) || '';
+    var home = el('a', 'home-link', '← Home');
+    home.href = baseUrl || '#';
+    if (baseUrl) home.target = '_top';
+    wrap.appendChild(home);
+
+    wrap.appendChild(el('h1', null, 'Shared students'));
+
+    if (!data || !data.teachers.length) {
+      wrap.appendChild(el('p', null, 'You don’t share any students with another teacher.'));
+      container.appendChild(wrap);
+      return;
+    }
+
+    data.teachers.forEach(function (t) {
+      var row = el('div', 'shared-list-row');
+      var link = el('a', null, t.full || t.last || t.key);
+      link.href = baseUrl + '?shared-with=' + encodeURIComponent(t.key);
+      if (baseUrl) link.target = '_top';
+      row.appendChild(link);
+      row.appendChild(el('span', 'count', ' (' + t.students.length + ' shared)'));
+      wrap.appendChild(row);
+    });
+
+    container.appendChild(wrap);
+  }
+
+  // Mobile ?shared-with: browse the shared students one at a time, swiping
+  // left (next) / right (previous). Shows photo, info, and both teachers'
+  // classes. Photos load via the same proxy as study mode.
+  function renderSharedSwipe(container, shared) {
+    container.innerHTML = '';
+    var wrap = el('div');
+    wrap.id = 'shared-swipe';
+
+    var baseUrl = (window.CTX && window.CTX.baseUrl) || '';
+    var back = el('a', 'home-link', '← Teachers');
+    back.href = baseUrl ? baseUrl + '?shared' : '#';
+    if (baseUrl) back.target = '_top';
+    wrap.appendChild(back);
+
+    if (!shared || !shared.resolved) {
+      wrap.appendChild(
+        el('p', null, 'No teacher found matching “' + (shared ? shared.param : '') + '”.'),
+      );
+      container.appendChild(wrap);
+      return;
+    }
+
+    wrap.appendChild(
+      el('h1', null, [shared.meLast, shared.otherLast].filter(Boolean).join(' / ')),
+    );
+
+    var students = shared.students || [];
+    if (!students.length) {
+      wrap.appendChild(el('p', null, 'No shared students.'));
+      container.appendChild(wrap);
+      return;
+    }
+
+    var counter = el('div', 'swipe-counter');
+    wrap.appendChild(counter);
+    var stage = el('div', 'swipe-stage');
+    wrap.appendChild(stage);
+
+    var cards = students.map(function (s) {
+      return buildSharedCard(s, shared);
+    });
+    var idx = 0;
+
+    function show(i) {
+      idx = Math.max(0, Math.min(students.length - 1, i));
+      var card = cards[idx];
+      loadCardImage(card);
+      stage.replaceChildren(card);
+      counter.textContent = idx + 1 + ' / ' + students.length;
+    }
+
+    var startX = null;
+    stage.addEventListener('touchstart', function (e) {
+      startX = e.touches[0].clientX;
+    });
+    stage.addEventListener('touchend', function (e) {
+      if (startX === null) return;
+      var dx = e.changedTouches[0].clientX - startX;
+      startX = null;
+      if (Math.abs(dx) > 40) show(dx < 0 ? idx + 1 : idx - 1);
+    });
+
+    show(0);
+    preloadPhotos(
+      students.map(function (s) {
+        return s.fileId;
+      }),
+    );
+    container.appendChild(wrap);
+  }
+
+  function buildSharedCard(s, shared) {
+    var card = el('div', 'swipe-card');
+
+    var img = el('img');
+    img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+    if (s.fileId) img.dataset.fileid = s.fileId; // proxy-loaded when shown
+    card.appendChild(img);
+
+    var info = el('div', 'swipe-info');
+    info.appendChild(
+      el('p', 'name', s.nickname ? s.nickname + ' (' + s.firstName + ')' : s.firstName),
+    );
+    info.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
+    info.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
+    info.appendChild(el('p', null, String(s.studentNumber)));
+    card.appendChild(info);
+
+    var classes = el('div', 'swipe-classes');
+    classes.appendChild(classLine(shared.meFull, s.mine));
+    classes.appendChild(classLine(shared.otherFull, s.other));
+    card.appendChild(classes);
+
+    return card;
+  }
+
+  function classLine(label, names) {
+    var p = el('p');
+    p.appendChild(el('strong', null, (label || '') + ': '));
+    p.appendChild(document.createTextNode((names || []).join(', ')));
+    return p;
+  }
 </script>

@@ -43,12 +43,15 @@ live; unchecked items are planned.
 - [x] `?shared-with=<teacher>` shows a table of students the current teacher
       shares with the named teacher — photo, flashcard info, your class(es), and
       their class(es) — sorted by your period, then theirs, then last then first
-      name (the teacher is matched by last name, username, or full email)
+      name (the teacher is matched by last name, username, or full email). On
+      mobile it's a swipe-through viewer: one student at a time (photo, info,
+      both teachers' classes), swipe left/right to move
 
 - [x] `?shared` shows an overview: every teacher the current teacher shares
       students with, each as a face grid (plus the distinct course names those
       students take with that teacher), with the teacher's name linking to their
-      `?shared-with=` page
+      `?shared-with=` page. On mobile it's a plain list of teachers with
+      shared-student counts
 
 ## Study modes
 

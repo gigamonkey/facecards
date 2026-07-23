@@ -121,11 +121,15 @@ function buildModel(email) {
 }
 
 function buildModelUncached(email) {
-  var rows = readStudents().filter(function (r) {
+  var rows = getRoster().filter(function (r) {
     return normalizeEmail(r.teacherEmail) === email;
   });
-  var photos = readPhotoMap();
+  return modelFromRows(rows);
+}
 
+// Build the { teacherLast, classes } model from one teacher's roster rows
+// (which already carry each student's photo fileId).
+function modelFromRows(rows) {
   var classes = {};
   var teacherLast = '';
 
@@ -161,7 +165,7 @@ function buildModelUncached(email) {
       gender: s.gender,
       course: s.course,
       period: s.period,
-      fileId: photos[String(s.studentNumber)] || '',
+      fileId: s.fileId || '',
     });
   });
 
@@ -192,8 +196,7 @@ function buildSharedModel(currentEmail, param) {
 }
 
 function buildSharedModelUncached(currentEmail, param) {
-  var rows = readStudents();
-  var photos = readPhotoMap();
+  var rows = getRoster();
 
   var otherEmails = resolveTeachers(rows, param);
   otherEmails.delete(currentEmail); // sharing "with yourself" is meaningless
@@ -230,7 +233,7 @@ function buildSharedModelUncached(currentEmail, param) {
         nickname: s.nickname,
         grade: s.grade,
         gender: s.gender,
-        fileId: photos[num] || '',
+        fileId: s.fileId || '',
       };
     }
     (slugsFor[num] = slugsFor[num] || new Set()).add(slug);
@@ -367,8 +370,7 @@ function buildSharedOverview(currentEmail) {
 }
 
 function buildSharedOverviewUncached(currentEmail) {
-  var rows = readStudents();
-  var photos = readPhotoMap();
+  var rows = getRoster();
 
   var teachersOf = {}; // studentNumber -> Set(teacherEmail)
   var coursesOf = {}; // "studentNumber|teacherEmail" -> Set(course)
@@ -395,7 +397,7 @@ function buildSharedOverviewUncached(currentEmail) {
         nickname: s.nickname,
         grade: s.grade,
         gender: s.gender,
-        fileId: photos[num] || '',
+        fileId: s.fileId || '',
       };
     }
   });
@@ -674,10 +676,14 @@ function cacheVersion() {
   return _cacheVersion;
 }
 
-/** Memoize a JSON-able value under a version-prefixed key in the script cache. */
+function vkey(key) {
+  return 'v' + cacheVersion() + ':' + key;
+}
+
+/** Memoize a small (<100KB) JSON-able value in the script cache. */
 function cached(key, fn) {
   var cache = CacheService.getScriptCache();
-  var full = 'v' + cacheVersion() + ':' + key;
+  var full = vkey(key);
   var hit = cache.get(full);
   if (hit !== null) {
     console.log('cache hit: ' + key);
@@ -691,6 +697,79 @@ function cached(key, fn) {
     console.log('cache skip (' + json.length + ' bytes): ' + key);
   }
   return val;
+}
+
+var CHUNK_SIZE = 90000; // under CacheService's 100KB-per-key limit
+
+/** Memoize a large JSON-able value, split across chunk keys. */
+function cachedBig(key, fn) {
+  var raw = readChunks(key);
+  if (raw !== null) {
+    console.log('cache hit (big): ' + key);
+    return JSON.parse(raw);
+  }
+  var val = fn();
+  writeChunks(key, JSON.stringify(val));
+  return val;
+}
+
+function readChunks(key) {
+  var cache = CacheService.getScriptCache();
+  var nStr = cache.get(vkey(key + ':n'));
+  if (!nStr) return null;
+  var n = Number(nStr);
+  var keys = [];
+  for (var i = 0; i < n; i++) keys.push(vkey(key + ':' + i));
+  var parts = cache.getAll(keys);
+  var out = '';
+  for (var j = 0; j < n; j++) {
+    var piece = parts[vkey(key + ':' + j)];
+    if (piece == null) return null; // a chunk was evicted -> treat as a miss
+    out += piece;
+  }
+  return out;
+}
+
+function writeChunks(key, str) {
+  var cache = CacheService.getScriptCache();
+  var n = Math.ceil(str.length / CHUNK_SIZE) || 1;
+  for (var i = 0; i < n; i++) {
+    cache.put(vkey(key + ':' + i), str.substr(i * CHUNK_SIZE, CHUNK_SIZE), CACHE_TTL);
+  }
+  cache.put(vkey(key + ':n'), String(n), CACHE_TTL);
+  console.log('cached big: ' + key + ' (' + n + ' chunks, ' + str.length + ' bytes)');
+}
+
+/**
+ * The distilled roster: only the columns the app uses, with each student's photo
+ * fileId joined in, cached globally (in chunks). This is the one expensive sheet
+ * read; every viewer's model is filtered from this cached copy rather than
+ * re-reading the sheet.
+ */
+function getRoster() {
+  return cachedBig('roster', function () {
+    var t0 = new Date().getTime();
+    var students = readStudents();
+    var photos = readPhotoMap();
+    var roster = students.map(function (s) {
+      return {
+        teacherEmail: s.teacherEmail,
+        teacherName: s.teacherName,
+        room: s.room,
+        period: s.period,
+        course: s.course,
+        studentNumber: s.studentNumber,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        nickname: s.nickname,
+        grade: s.grade,
+        gender: s.gender,
+        fileId: photos[String(s.studentNumber)] || '',
+      };
+    });
+    logTime('getRoster distill (' + roster.length + ' rows)', t0);
+    return roster;
+  });
 }
 
 /** Invalidate all cached models/admins. Run after editing the roster. */

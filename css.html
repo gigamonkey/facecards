@@ -150,6 +150,7 @@
   body.view-study .back {
     display: none;
     margin-top: 1em;
+    font-size: clamp(17px, 4.5vmin, 24px); /* readable on mobile despite the small root font */
   }
   #study-header {
     margin: 0.4em 0 0.2em;
@@ -169,7 +170,8 @@
   }
   body.view-study .card img {
     width: 320px;
-    max-width: 90%;
+    max-width: 90vw; /* viewport-relative, not card-relative, so revealing the
+                        back doesn't resize the photo */
     height: auto;
   }
   #instructions {
@@ -407,8 +409,8 @@
       padding-bottom: 0;
     }
     body.view-study .card img {
-      width: 90vw;
-      max-width: 90vw;
+      width: 85vw;
+      max-width: 85vw;
     }
     body.view-study #instructions {
       display: none;

@@ -117,14 +117,16 @@
   body.view-study {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     align-content: center;
     width: calc(min(40em, 80%));
-    margin: 5vh auto;
+    margin: 5vh auto 0;
+    padding-bottom: 7em; /* reserve room for the fixed instructions footer */
+    box-sizing: border-box;
     background: #eeeefa;
     border-radius: 12px;
     text-align: center;
-    height: 90vh;
+    height: 95vh;
   }
   body.view-study .back {
     display: none;
@@ -140,9 +142,10 @@
   }
   #current {
     display: flex;
+    flex: 1; /* fill the space between header and footer, centering the card */
     flex-direction: row;
     justify-content: center;
-    margin-top: 1em;
+    align-items: center;
   }
   #instructions {
     font-style: italic;
@@ -151,6 +154,15 @@
     background: #ddd;
     padding: 1em;
     margin: 1em;
+  }
+  /* Pin the instructions to the bottom of the viewport, card-width, centered. */
+  body.view-study #instructions {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(min(40em, 80%));
+    margin: 0;
   }
 
   /* ---- Shared-with table view ---- */

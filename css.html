@@ -164,14 +164,15 @@
     justify-content: center;
     align-items: center;
   }
-  /* Bigger photos in study mode than in the home grid. */
+  /* Bigger photos in study mode than in the home grid. The card is a fixed width
+     (the photo's width) and both the photo and the revealed info fill it, so the
+     photo doesn't shift when the info appears. */
   body.view-study .card {
-    width: auto;
+    width: 320px;
+    max-width: 90vw;
   }
   body.view-study .card img {
-    width: 320px;
-    max-width: 90vw; /* viewport-relative, not card-relative, so revealing the
-                        back doesn't resize the photo */
+    width: 100%;
     height: auto;
   }
   #instructions {
@@ -408,7 +409,7 @@
       width: 100vw;
       padding-bottom: 0;
     }
-    body.view-study .card img {
+    body.view-study .card {
       width: 85vw;
       max-width: 85vw;
     }

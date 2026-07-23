@@ -42,10 +42,6 @@
     font-weight: 600;
     font-size: 2.4rem;
   }
-  body.view-study .card .initials {
-    width: 100%;
-    font-size: min(22vw, 6rem);
-  }
   /* "Loading…" placeholder while a deferred photo is fetched. */
   .loading {
     width: 100%;
@@ -214,11 +210,11 @@
     justify-content: center;
     align-items: center;
   }
-  /* Bigger photos in study mode than in the home grid. The card is a fixed width
-     (the photo's width) and both the photo and the revealed info fill it, so the
-     photo doesn't shift when the info appears. */
+  /* The card is a fixed width (the photo's native ~172px, so it stays crisp)
+     and both the photo and the revealed info fill it, so the photo doesn't
+     shift when the info appears. */
   body.view-study .card {
-    width: 320px;
+    width: 172px;
     max-width: 90vw;
   }
   body.view-study .card img {
@@ -502,14 +498,8 @@
       padding: 0.7em 0;
       font-size: clamp(16px, 4.5vmin, 22px);
     }
-    /* Photos take most of the width. */
     body.view-study {
-      width: 100vw;
       padding-bottom: 0;
-    }
-    body.view-study .card {
-      width: 85vw;
-      max-width: 85vw;
     }
   }
 </style>

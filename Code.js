@@ -115,7 +115,7 @@ function include(name) {
  * by slug and each student is joined to its photo fileId.
  */
 function buildModel(email) {
-  return cached('model:' + email, function () {
+  return cachedBig('model:' + email, function () {
     return buildModelUncached(email);
   });
 }
@@ -190,7 +190,7 @@ function modelFromRows(rows) {
  * teacher can't be found.
  */
 function buildSharedModel(currentEmail, param) {
-  return cached('sharedwith:' + currentEmail + ':' + normalizeEmail(param), function () {
+  return cachedBig('sharedwith:' + currentEmail + ':' + normalizeEmail(param), function () {
     return buildSharedModelUncached(currentEmail, param);
   });
 }
@@ -364,7 +364,7 @@ function minPeriod(list) {
  * are sorted by last name; students within each by last then first name.
  */
 function buildSharedOverview(currentEmail) {
-  return cached('overview:' + currentEmail, function () {
+  return cachedBig('overview:' + currentEmail, function () {
     return buildSharedOverviewUncached(currentEmail);
   });
 }

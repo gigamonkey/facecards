@@ -114,16 +114,8 @@
       var current = el('div');
       current.id = 'current';
 
-      var instructions = el('div');
-      instructions.id = 'instructions';
-      instructions.textContent =
-        'Press any key (or tap) to show the name and other info on the back of ' +
-        'the card. When the back is showing, press right arrow (or swipe right) ' +
-        'if you got it right and left arrow (swipe left) if you got it wrong.';
-
       app.appendChild(header);
       app.appendChild(current);
-      app.appendChild(instructions);
 
       var cards = students.map(function (s) {
         return buildCard(s, {

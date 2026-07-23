@@ -133,7 +133,7 @@
     align-content: center;
     width: calc(min(40em, 80%));
     margin: var(--nav-h) auto 0; /* clear the fixed navbar */
-    padding-bottom: 7em; /* reserve room for the fixed instructions footer */
+    padding-bottom: 1em;
     box-sizing: border-box;
     background: #eeeefa;
     border-radius: 12px;
@@ -168,26 +168,10 @@
     width: 100%;
     height: auto;
   }
-  #instructions {
-    font-style: italic;
-    font-size: 90%;
-    border: 1px dotted black;
-    background: #ddd;
-    padding: 1em;
-    margin: 1em;
-  }
-  /* Pin the instructions to the bottom of the viewport, card-width, centered. */
-  body.view-study #instructions {
-    position: fixed;
-    bottom: 1em;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(min(40em, 80%));
-    margin: 0;
-  }
   /* Navbar "?" help button + the overlay it opens. */
   .nav-help {
-    display: none; /* mobile only — desktop study shows the footer instructions */
+    display: inline-flex;
+    align-items: center;
     border: none;
     background: none;
     color: #fff;
@@ -457,8 +441,7 @@
       padding: 0.7em 0;
       font-size: clamp(16px, 4.5vmin, 22px);
     }
-    /* On mobile the full instructions are hidden behind a "?" button that toggles
-       a short touch-specific tip. Photos take most of the width. */
+    /* Photos take most of the width. */
     body.view-study {
       width: 100vw;
       padding-bottom: 0;
@@ -466,13 +449,6 @@
     body.view-study .card {
       width: 85vw;
       max-width: 85vw;
-    }
-    body.view-study #instructions {
-      display: none; /* replaced by the navbar "?" overlay on mobile */
-    }
-    .nav-help {
-      display: inline-flex;
-      align-items: center;
     }
   }
 </style>

@@ -17,7 +17,8 @@ live; unchecked items are planned.
 ## Home and navigation
 
 - [x] Home page is a menu with two choices: "Learn students' names" (the class
-      face grids, at `?learn`) and "See shared students" (`?shared`)
+      face grids, at `?learn`) and "See shared students" (`?shared`), plus a QR
+      code to the app URL for opening it on a phone
 
 - [x] `?learn` shows the teacher's classes as grids of student photo cards
 

@@ -45,6 +45,21 @@
       boxes.appendChild(menuBox('Learn students’ names', '?learn'));
       boxes.appendChild(menuBox('See shared students', '?shared'));
       menu.appendChild(boxes);
+
+      // QR code to the app URL, so it's easy to open on a phone without typing
+      // the long /exec URL.
+      if (CTX.baseUrl) {
+        var qr = el('div', 'menu-qr');
+        var img = el('img');
+        img.alt = 'QR code to open Facecards on your phone';
+        img.src =
+          'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=' +
+          encodeURIComponent(CTX.baseUrl);
+        qr.appendChild(img);
+        qr.appendChild(el('p', null, 'Scan to open on your phone'));
+        menu.appendChild(qr);
+      }
+
       app.appendChild(menu);
       window.scrollTo(0, 0);
     }

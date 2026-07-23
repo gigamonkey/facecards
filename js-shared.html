@@ -1,0 +1,80 @@
+<script>
+  // Render the ?shared-with= table: students the current teacher shares with
+  // another teacher — photo, info, your class(es), their class(es).
+  function renderShared(container, shared) {
+    container.innerHTML = '';
+    var wrap = el('div');
+    wrap.id = 'shared';
+
+    var baseUrl = (window.CTX && CTX.baseUrl) || '';
+    var home = el('a', 'home-link', '← Home');
+    home.href = baseUrl || '#';
+    if (baseUrl) home.target = '_top';
+    wrap.appendChild(home);
+
+    if (!shared || !shared.resolved) {
+      wrap.appendChild(
+        el('p', null, 'No teacher found matching “' + (shared ? shared.param : '') + '”.'),
+      );
+      container.appendChild(wrap);
+      return;
+    }
+
+    wrap.appendChild(el('h1', null, 'Students you share with ' + shared.otherLabel));
+
+    if (!shared.students.length) {
+      wrap.appendChild(el('p', null, 'No shared students.'));
+      container.appendChild(wrap);
+      return;
+    }
+
+    var table = el('table', 'shared-table');
+
+    var thead = el('thead');
+    var htr = el('tr');
+    ['', 'Student', 'Your class', shared.otherLabel + '’s class'].forEach(function (h) {
+      htr.appendChild(el('th', null, h));
+    });
+    thead.appendChild(htr);
+    table.appendChild(thead);
+
+    var tbody = el('tbody');
+    shared.students.forEach(function (s) {
+      var tr = el('tr');
+
+      var tdPhoto = el('td', 'photo');
+      var img = el('img');
+      img.loading = 'lazy';
+      img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+      if (s.fileId) img.src = thumbUrl(s.fileId, 200);
+      tdPhoto.appendChild(img);
+      tr.appendChild(tdPhoto);
+
+      var tdInfo = el('td', 'info');
+      tdInfo.appendChild(
+        el('p', 'name', s.nickname ? s.nickname + ' (' + s.firstName + ')' : s.firstName),
+      );
+      tdInfo.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
+      tdInfo.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
+      tdInfo.appendChild(el('p', null, String(s.studentNumber)));
+      tr.appendChild(tdInfo);
+
+      tr.appendChild(classesCell(s.mine));
+      tr.appendChild(classesCell(s.other));
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+
+    container.appendChild(wrap);
+  }
+
+  function classesCell(names) {
+    var td = el('td', 'classes');
+    (names || []).forEach(function (n) {
+      td.appendChild(el('p', null, n));
+    });
+    return td;
+  }
+</script>

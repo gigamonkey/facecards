@@ -38,8 +38,6 @@ function doGet(e) {
   var effective = asParam || actual;
   var impersonating = effective !== actual;
 
-  var model = buildModel(effective);
-
   var ctx = {
     actual: actual,
     effective: effective,
@@ -47,6 +45,18 @@ function doGet(e) {
     isAdmin: isAdmin,
     baseUrl: getBaseUrl(),
   };
+
+  // Shared-with view: a table of students the viewer shares with another teacher.
+  if (params['shared-with']) {
+    var st = HtmlService.createTemplateFromFile('index');
+    st.modelJson = jsonForScript({ teacherLast: '', classes: {} });
+    st.routeJson = jsonForScript({ mode: 'shared', scope: '', id: '' });
+    st.sharedJson = jsonForScript(buildSharedModel(effective, String(params['shared-with'])));
+    st.ctxJson = jsonForScript(ctx);
+    return page(st);
+  }
+
+  var model = buildModel(effective);
 
   // No sections for this viewer -> landing page.
   if (Object.keys(model.classes).length === 0) {
@@ -64,6 +74,7 @@ function doGet(e) {
   var t = HtmlService.createTemplateFromFile('index');
   t.modelJson = jsonForScript(model);
   t.routeJson = jsonForScript(route);
+  t.sharedJson = jsonForScript(null);
   t.ctxJson = jsonForScript(ctx);
   return page(t);
 }
@@ -133,6 +144,157 @@ function buildModel(email) {
   });
 
   return { teacherLast: teacherLast, classes: classes };
+}
+
+/**
+ * Build the "shared with" table model: students that the current teacher and a
+ * named other teacher both teach. For each such student we return their photo,
+ * identity info, the current teacher's class(es), and the other teacher's
+ * class(es), sorted by the current teacher's period, then the other's, then
+ * last name, then first name. Returns { resolved: false, param } when the other
+ * teacher can't be found.
+ */
+function buildSharedModel(currentEmail, param) {
+  var rows = readStudents();
+  var photos = readPhotoMap();
+
+  var otherEmails = resolveTeachers(rows, param);
+  otherEmails.delete(currentEmail); // sharing "with yourself" is meaningless
+  if (otherEmails.size === 0) {
+    return { resolved: false, param: param };
+  }
+
+  // Group every row into room+period classes (per teacher) and track, per
+  // student, which classes they're in. This spans the whole roster, not just
+  // the viewer's sections.
+  var classIndex = {}; // slug -> { name, period, teacherEmail, courses }
+  var info = {}; // studentNumber -> identity fields
+  var slugsFor = {}; // studentNumber -> Set(slug)
+
+  rows.forEach(function (s) {
+    var num = String(s.studentNumber);
+    var teacher = normalizeEmail(s.teacherEmail);
+    var local = teacher.replace(/@.*$/, '');
+    var slug = slugify(s.room + '-p-' + s.period + '-' + local);
+
+    if (!classIndex[slug]) {
+      classIndex[slug] = { period: s.period, teacherEmail: teacher, courses: [] };
+    }
+    var course = String(s.course || '');
+    if (course && classIndex[slug].courses.indexOf(course) === -1) {
+      classIndex[slug].courses.push(course);
+    }
+
+    if (!info[num]) {
+      info[num] = {
+        studentNumber: num,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        nickname: s.nickname,
+        grade: s.grade,
+        gender: s.gender,
+        fileId: photos[num] || '',
+      };
+    }
+    (slugsFor[num] = slugsFor[num] || new Set()).add(slug);
+  });
+
+  Object.keys(classIndex).forEach(function (slug) {
+    var c = classIndex[slug];
+    c.courses.sort(function (a, b) { return a.localeCompare(b); });
+    c.name = c.courses.join(' / ') + ' Period ' + c.period;
+  });
+
+  var students = [];
+  Object.keys(slugsFor).forEach(function (num) {
+    var mine = [];
+    var other = [];
+    slugsFor[num].forEach(function (slug) {
+      var c = classIndex[slug];
+      if (c.teacherEmail === currentEmail) mine.push(c);
+      else if (otherEmails.has(c.teacherEmail)) other.push(c);
+    });
+    if (mine.length && other.length) {
+      var i = info[num];
+      students.push({
+        studentNumber: num,
+        firstName: i.firstName,
+        lastName: i.lastName,
+        nickname: i.nickname,
+        grade: i.grade,
+        gender: i.gender,
+        fileId: i.fileId,
+        mine: classNames(mine),
+        other: classNames(other),
+        minePeriod: minPeriod(mine),
+        otherPeriod: minPeriod(other),
+      });
+    }
+  });
+
+  students.sort(function (a, b) {
+    return (
+      a.minePeriod - b.minePeriod ||
+      a.otherPeriod - b.otherPeriod ||
+      String(a.lastName).localeCompare(String(b.lastName)) ||
+      String(a.firstName).localeCompare(String(b.firstName))
+    );
+  });
+
+  return { resolved: true, otherLabel: teacherLabel(rows, otherEmails, param), students: students };
+}
+
+// Resolve a "shared-with" value to a set of teacher emails, matching by full
+// email, bare username, email local-part, teacher last name, or full
+// teacherName — whatever the caller typed.
+function resolveTeachers(rows, param) {
+  var raw = normalizeEmail(param);
+  var qualified = qualifyEmail(param);
+  var out = new Set();
+  rows.forEach(function (s) {
+    var email = normalizeEmail(s.teacherEmail);
+    if (!email) return;
+    var local = email.replace(/@.*$/, '');
+    var last = String(s.teacherName || '').replace(/,.*$/, '').trim().toLowerCase();
+    var full = String(s.teacherName || '').trim().toLowerCase();
+    if (email === qualified || email === raw || local === raw || last === raw || full === raw) {
+      out.add(email);
+    }
+  });
+  return out;
+}
+
+// Display label for the matched other teacher(s): their last name(s), or the
+// raw param if none is found.
+function teacherLabel(rows, emails, param) {
+  var lasts = [];
+  rows.forEach(function (s) {
+    if (!emails.has(normalizeEmail(s.teacherEmail))) return;
+    var last = String(s.teacherName || '').replace(/,.*$/, '').trim();
+    if (last && lasts.indexOf(last) === -1) lasts.push(last);
+  });
+  return lasts.length ? lasts.join(' / ') : String(param);
+}
+
+// Distinct class names from a list of class objects, sorted.
+function classNames(list) {
+  var names = [];
+  list.forEach(function (c) {
+    if (names.indexOf(c.name) === -1) names.push(c.name);
+  });
+  names.sort(function (a, b) { return a.localeCompare(b); });
+  return names;
+}
+
+function periodNum(p) {
+  var n = parseInt(p, 10);
+  return isNaN(n) ? 9999 : n;
+}
+
+function minPeriod(list) {
+  return list.reduce(function (m, c) {
+    return Math.min(m, periodNum(c.period));
+  }, Infinity);
 }
 
 /**

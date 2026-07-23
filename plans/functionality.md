@@ -36,6 +36,11 @@ live; unchecked items are planned.
 - [x] Shareable deep links open a specific study session directly
       (`?mode=learn|review&scope=class&id=<slug>`)
 
+- [x] `?shared-with=<teacher>` shows a table of students the current teacher
+      shares with the named teacher — photo, flashcard info, your class(es), and
+      their class(es) — sorted by your period, then theirs, then last then first
+      name (the teacher is matched by last name, username, or full email)
+
 ## Study modes
 
 - [x] One card shown at a time; press a key or tap to reveal the back, then
@@ -66,9 +71,6 @@ live; unchecked items are planned.
       by running `refreshPhotoMap` after uploading new images
 
 ## Planned
-
-- [ ] `?shared-with=teachername` gives a grid of students shared between the
-      user and the other named teacher.
 
 - [ ] Per-section volunteer access: a teacher can assign a volunteer to a
       specific section, and that volunteer gets a page scoped to just that

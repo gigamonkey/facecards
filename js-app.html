@@ -137,8 +137,14 @@
       }
     }
 
-    // Initial dispatch: a shared learn/review link lands straight in study mode.
-    if (ROUTE.mode === 'learn' || ROUTE.mode === 'review') {
+    // Initial dispatch: a shared learn/review link lands straight in study mode;
+    // ?shared-with= lands in the shared-students table.
+    if (ROUTE.mode === 'shared') {
+      clearStudy();
+      setView('shared');
+      renderShared(app, window.SHARED);
+      window.scrollTo(0, 0);
+    } else if (ROUTE.mode === 'learn' || ROUTE.mode === 'review') {
       showStudy(ROUTE.mode, ROUTE.scope || 'all', ROUTE.id || '');
     } else {
       showHome();

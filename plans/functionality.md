@@ -16,6 +16,9 @@ live; unchecked items are planned.
 
 ## Home and navigation
 
+- [x] A top navbar (Home / Learn / Shared) appears on every page; admins also get
+      the impersonation controls (view-as, "back to me") there
+
 - [x] Home page is a menu with two choices: "Learn students' names" (the class
       face grids, at `?learn`) and "See shared students" (`?shared`), plus a QR
       code to the app URL for opening it on a phone

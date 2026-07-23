@@ -1,6 +1,10 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap');
 
+  :root {
+    --nav-h: 44px; /* fixed top navbar height */
+  }
+
   html {
     box-sizing: border-box;
     font-family: Jost, system-ui, sans-serif;
@@ -32,9 +36,9 @@
     text-align: center;
   }
 
-  /* ---- Impersonation / admin banner ---- */
+  /* ---- Top navbar (Home / Learn / Shared, plus admin controls) ---- */
   #banner:empty {
-    display: none;
+    display: none; /* the server-rendered landing banner may be empty */
   }
   #banner {
     position: fixed;
@@ -42,14 +46,29 @@
     left: 0;
     right: 0;
     z-index: 1000;
+    height: var(--nav-h);
+    box-sizing: border-box;
     background: #443;
     color: #fff;
-    font: 400 0.85rem/1.4 sans-serif;
-    padding: 5px 10px;
+    font: 400 15px/1.4 sans-serif; /* fixed px so it doesn't shrink with the mobile root font */
+    padding: 0 10px;
     display: flex;
     gap: 0.75em;
     align-items: center;
-    flex-wrap: wrap;
+    white-space: nowrap;
+    overflow-x: auto;
+  }
+  #banner .nav-links {
+    display: flex;
+    gap: 1em;
+  }
+  #banner .nav-link {
+    color: #fff;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  #banner .nav-note {
+    color: #fda;
   }
   #banner a {
     color: #cdf;
@@ -120,13 +139,13 @@
     justify-content: flex-start;
     align-content: center;
     width: calc(min(40em, 80%));
-    margin: 5vh auto 0;
+    margin: var(--nav-h) auto 0; /* clear the fixed navbar */
     padding-bottom: 7em; /* reserve room for the fixed instructions footer */
     box-sizing: border-box;
     background: #eeeefa;
     border-radius: 12px;
     text-align: center;
-    height: 95vh;
+    height: calc(100vh - var(--nav-h));
   }
   body.view-study .back {
     display: none;
@@ -241,17 +260,13 @@
     align-items: center;
     width: 100vw;
     min-height: 100vh;
-    padding: 1em;
+    padding: calc(var(--nav-h) + 0.5em) 1em 1em; /* top clears the fixed navbar */
+    box-sizing: border-box;
     text-align: center;
   }
   #shared-swipe {
     width: 100%;
     max-width: 30em;
-  }
-  /* Clear the fixed admin/impersonation banner (other views have enough top
-     margin already; the swipe view starts at the top). */
-  body.has-banner.view-shared-swipe {
-    padding-top: 4em;
   }
   #shared-swipe .home-link {
     display: block;
@@ -370,7 +385,7 @@
       width: 100vw;
       gap: 0.25vh;
       padding: 1em;
-      margin: 5vh auto;
+      margin: calc(var(--nav-h) + 1vh) auto 5vh; /* clear the fixed navbar */
       text-align: center;
       height: auto;
     }

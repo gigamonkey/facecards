@@ -13,10 +13,9 @@
     var teardownStudy = null;
 
     renderBanner();
-    var bannerShown = !!(banner && banner.children.length);
 
     function setView(name) {
-      document.body.className = 'view-' + name + (bannerShown ? ' has-banner' : '');
+      document.body.className = 'view-' + name;
     }
 
     function isMobile() {
@@ -171,13 +170,21 @@
     function renderBanner() {
       if (!banner) return;
       banner.innerHTML = '';
-      if (!CTX.isAdmin && !CTX.impersonating) return;
+      var base = CTX.baseUrl || '';
 
+      // Nav links — everyone.
+      var nav = el('div', 'nav-links');
+      nav.appendChild(navLink('Home', base));
+      nav.appendChild(navLink('Learn', base + '?learn'));
+      nav.appendChild(navLink('Shared', base + '?shared'));
+      banner.appendChild(nav);
+
+      // Impersonation notice — admins viewing as someone else.
       if (CTX.impersonating) {
-        banner.appendChild(el('span', null, 'Viewing as ' + CTX.effective));
-        if (CTX.baseUrl) {
-          var backLink = el('a', null, 'back to my view');
-          backLink.href = CTX.baseUrl;
+        banner.appendChild(el('span', 'nav-note', 'as ' + CTX.effective));
+        if (base) {
+          var backLink = el('a', null, 'back to me');
+          backLink.href = base;
           backLink.target = '_top';
           banner.appendChild(backLink);
         }
@@ -188,11 +195,11 @@
         form.action = CTX.baseUrl;
         form.method = 'get';
         form.target = '_top';
-        var label = el('label', null, 'view as ');
         var input = document.createElement('input');
         input.name = 'as';
         input.type = 'text';
-        input.placeholder = 'teacher (or full email)';
+        input.placeholder = 'view as…';
+        input.setAttribute('aria-label', 'View as user');
         input.required = true;
         input.addEventListener('keydown', function (e) {
           if (e.key === 'Enter') {
@@ -201,11 +208,17 @@
             else form.submit();
           }
         });
-        label.appendChild(input);
-        form.appendChild(label);
+        form.appendChild(input);
         form.appendChild(el('button', null, 'Go'));
         banner.appendChild(form);
       }
+    }
+
+    function navLink(label, href) {
+      var a = el('a', 'nav-link', label);
+      a.href = href || '#';
+      if (CTX.baseUrl) a.target = '_top';
+      return a;
     }
 
     // Initial dispatch: a shared learn/review link lands straight in study mode;

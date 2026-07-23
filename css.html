@@ -92,18 +92,11 @@
     background: #eeeefa;
     border-radius: 12px;
   }
-  body.view-home h1,
-  body.view-home h2 {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 0.5em;
-  }
   body.view-home h1 {
-    margin: 1em 0 0;
+    margin: 1em 0 0.3em;
   }
   body.view-home h2 {
-    margin: 1em 0;
+    margin: 1em 0 0.3em;
   }
   body.view-home .faces {
     display: flex;
@@ -252,13 +245,20 @@
   }
 
   /* ---- Mobile shared: teacher list ---- */
+  #shared-list {
+    text-align: center;
+  }
+  #shared-list h1 {
+    font-size: clamp(24px, 8vmin, 36px);
+    margin: 0.3em 0 0.6em;
+  }
   #shared-list .shared-list-row {
-    margin: 0.6em 0;
-    font-size: 1.15em;
+    margin: 0.8em 0;
+    font-size: clamp(22px, 7vmin, 30px);
   }
   #shared-list .count {
     color: #445;
-    font-size: 0.8em;
+    font-size: 0.55em;
   }
 
   /* ---- Mobile shared: one-at-a-time swipe viewer ---- */
@@ -397,11 +397,27 @@
       text-align: center;
       height: auto;
     }
+    body.view-home .teacher-name {
+      display: none; /* the navbar already says where you are */
+    }
     body.view-home h2 {
-      margin-left: 1em;
+      margin: 0.7em 0 0.3em;
+      font-size: clamp(20px, 5.5vmin, 28px);
+      font-weight: 400;
     }
     body.view-home div.faces {
       display: none;
+    }
+    body.view-home .buttons {
+      display: flex;
+      gap: 0.5em;
+      margin-bottom: 0.3em;
+    }
+    body.view-home .buttons a {
+      flex: 1; /* Learn / Review each take half the width */
+      text-align: center;
+      padding: 0.7em 0;
+      font-size: clamp(16px, 4.5vmin, 22px);
     }
     /* On mobile the full instructions are hidden behind a "?" button that toggles
        a short touch-specific tip. Photos take most of the width. */

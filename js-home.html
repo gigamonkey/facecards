@@ -8,38 +8,14 @@
     var home = el('div');
     home.id = 'home';
 
-    var h1 = el('h1', null, model.teacherLast || 'My students');
-    var allButtons = el('span', 'buttons');
-    allButtons.appendChild(
-      studyLink('learn all', function () {
-        onStudy('learn', 'all', '');
-      }),
-    );
-    allButtons.appendChild(
-      studyLink('review all', function () {
-        onStudy('review', 'all', '');
-      }),
-    );
-    h1.appendChild(allButtons);
-    home.appendChild(h1);
+    // Teacher name (hidden on mobile via CSS).
+    home.appendChild(el('h1', 'teacher-name', model.teacherLast || 'My students'));
 
     Object.keys(model.classes).forEach(function (slug) {
       var c = model.classes[slug];
 
-      var h2 = el('h2', null, c.name);
-      var buttons = el('span', 'buttons');
-      buttons.appendChild(
-        studyLink('learn', function () {
-          onStudy('learn', 'class', slug);
-        }),
-      );
-      buttons.appendChild(
-        studyLink('review', function () {
-          onStudy('review', 'class', slug);
-        }),
-      );
-      h2.appendChild(buttons);
-      home.appendChild(h2);
+      home.appendChild(el('h2', null, c.name));
+      home.appendChild(buttonsRow(onStudy, 'class', slug));
 
       var faces = el('div', 'faces');
       c.students
@@ -55,7 +31,26 @@
       home.appendChild(faces);
     });
 
+    home.appendChild(el('h2', null, 'All students'));
+    home.appendChild(buttonsRow(onStudy, 'all', ''));
+
     container.appendChild(home);
+  }
+
+  // A Learn/Review button pair for a study scope.
+  function buttonsRow(onStudy, scope, id) {
+    var div = el('div', 'buttons');
+    div.appendChild(
+      studyLink('Learn', function () {
+        onStudy('learn', scope, id);
+      }),
+    );
+    div.appendChild(
+      studyLink('Review', function () {
+        onStudy('review', scope, id);
+      }),
+    );
+    return div;
   }
 
   function studyLink(text, handler) {

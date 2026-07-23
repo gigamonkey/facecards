@@ -35,8 +35,8 @@ live; unchecked items are planned.
 - [x] Per-class "learn" / "review" links, plus "learn all" / "review all"
       across all of the teacher's students
 
-- [x] Student photos shown via Google Drive thumbnails; missing photos degrade
-      to a blank card
+- [x] Home and shared grids show student photos via Google Drive thumbnail URLs;
+      missing photos degrade to a blank card
 
 - [x] On phones the photo grid is hidden and study mode is used instead
 
@@ -62,6 +62,17 @@ live; unchecked items are planned.
       right arrow / swipe right = got it, left arrow / swipe left = missed
 
 - [x] Keyboard (arrow keys) and touch-swipe input
+
+- [x] Study photos load one at a time through the script (not Drive thumbnail
+      URLs), so they work on mobile browsers like Safari that block the
+      cross-site Drive cookies the grids rely on; each is cached for the session
+      and the rest are prefetched in the background
+
+- [x] A not-yet-loaded study card shows the student's initials, not their name,
+      so it doesn't give away the answer
+
+- [x] On phones, the study instructions are tucked behind a "?" button (a short,
+      touch-specific tip); larger photos and info text than the grids
 
 - [x] **Learn** mode: spaced-repetition engine (Leitner boxes sized by the
       Fibonacci sequence); wrong answers recycle to the deck

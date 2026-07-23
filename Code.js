@@ -427,18 +427,42 @@ function refreshPhotoMap() {
  * cross-site (e.g. Safari's tracking prevention on mobile). Returns '' on any
  * failure so the client just shows a blank card.
  */
+var PHOTO_SIZE = 800; // requested thumbnail width — enough to look crisp scaled up
+
 function getPhoto(fileId) {
   if (!fileId) return '';
   var t0 = new Date().getTime();
   try {
-    var file = DriveApp.getFileById(fileId);
-    var blob = file.getThumbnail() || file.getBlob();
+    var blob = sizedThumbnail(fileId) || DriveApp.getFileById(fileId).getBlob();
     var out = 'data:' + blob.getContentType() + ';base64,' + Utilities.base64Encode(blob.getBytes());
     logTime('getPhoto ' + fileId, t0);
     return out;
   } catch (err) {
     logTime('getPhoto ' + fileId + ' FAILED', t0);
     return '';
+  }
+}
+
+/**
+ * A PHOTO_SIZE-wide thumbnail from Drive (much sharper than
+ * DriveApp.getThumbnail()'s small fixed size), fetched with the script's own
+ * OAuth token. Returns null on any failure so getPhoto falls back to the full
+ * image.
+ */
+function sizedThumbnail(fileId) {
+  try {
+    var resp = UrlFetchApp.fetch(
+      'https://drive.google.com/thumbnail?id=' + encodeURIComponent(fileId) + '&sz=w' + PHOTO_SIZE,
+      {
+        headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true,
+      },
+    );
+    if (resp.getResponseCode() !== 200) return null;
+    var blob = resp.getBlob();
+    return /^image\//.test(blob.getContentType()) ? blob : null;
+  } catch (err) {
+    return null;
   }
 }
 

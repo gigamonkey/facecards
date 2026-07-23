@@ -20,7 +20,8 @@
       return;
     }
 
-    wrap.appendChild(el('h1', null, 'Students you share with ' + shared.otherLabel));
+    var title = [shared.meLast, shared.otherLast].filter(Boolean).join(' / ');
+    wrap.appendChild(el('h1', null, title + ' shared students'));
 
     if (!shared.students.length) {
       wrap.appendChild(el('p', null, 'No shared students.'));
@@ -32,7 +33,7 @@
 
     var thead = el('thead');
     var htr = el('tr');
-    ['', 'Student', 'Your class', shared.otherLabel + '’s class'].forEach(function (h) {
+    ['', 'Student', shared.meFull, shared.otherFull].forEach(function (h) {
       htr.appendChild(el('th', null, h));
     });
     thead.appendChild(htr);

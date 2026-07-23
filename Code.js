@@ -241,7 +241,17 @@ function buildSharedModel(currentEmail, param) {
     );
   });
 
-  return { resolved: true, otherLabel: teacherLabel(rows, otherEmails, param), students: students };
+  var me = teacherNames(rows, new Set([currentEmail]));
+  var them = teacherNames(rows, otherEmails);
+
+  return {
+    resolved: true,
+    meLast: me.last,
+    meFull: me.full,
+    otherLast: them.last || String(param),
+    otherFull: them.full || String(param),
+    students: students,
+  };
 }
 
 // Resolve a "shared-with" value to a set of teacher emails, matching by full
@@ -264,16 +274,26 @@ function resolveTeachers(rows, param) {
   return out;
 }
 
-// Display label for the matched other teacher(s): their last name(s), or the
-// raw param if none is found.
-function teacherLabel(rows, emails, param) {
+// Distinct last name(s) and full name(s) for a set of teacher emails.
+// teacherName is stored "Last, First"; fullName renders it as "First Last".
+function teacherNames(rows, emails) {
   var lasts = [];
+  var fulls = [];
   rows.forEach(function (s) {
     if (!emails.has(normalizeEmail(s.teacherEmail))) return;
-    var last = String(s.teacherName || '').replace(/,.*$/, '').trim();
+    var raw = String(s.teacherName || '').trim();
+    var last = raw.replace(/,.*$/, '').trim();
+    var full = fullName(raw);
     if (last && lasts.indexOf(last) === -1) lasts.push(last);
+    if (full && fulls.indexOf(full) === -1) fulls.push(full);
   });
-  return lasts.length ? lasts.join(' / ') : String(param);
+  return { last: lasts.join(' / '), full: fulls.join(' / ') };
+}
+
+function fullName(raw) {
+  var parts = String(raw).split(',');
+  if (parts.length === 2) return parts[1].trim() + ' ' + parts[0].trim();
+  return String(raw).trim();
 }
 
 // Distinct class names from a list of class objects, sorted.

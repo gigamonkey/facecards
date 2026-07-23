@@ -32,7 +32,7 @@
 
         <? if (ctx.isAdmin && ctx.baseUrl) { ?>
         <form id="viewas" action="<?= ctx.baseUrl ?>" method="get" target="_top">
-          <label>View as <input name="as" type="email" placeholder="teacher@berkeley.net" required /></label>
+          <label>View as <input name="as" type="text" placeholder="teacher (or full email)" required /></label>
           <button type="submit">Go</button>
         </form>
         <? } ?>

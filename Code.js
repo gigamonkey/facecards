@@ -34,7 +34,7 @@ function doGet(e) {
   }
 
   var isAdmin = readAdmins().has(actual);
-  var asParam = isAdmin && params.as ? normalizeEmail(params.as) : '';
+  var asParam = isAdmin && params.as ? qualifyEmail(params.as) : '';
   var effective = asParam || actual;
   var impersonating = effective !== actual;
 
@@ -173,8 +173,10 @@ function readPhotoMap() {
 
 /**
  * Lowercased Set of admin emails from the `admins` tab. Reads every cell and
- * keeps anything that looks like an email, so the tab can be a plain list with
- * or without a header row (a header like "email" has no "@" and is ignored).
+ * keeps anything that resolves to an email — bare usernames get @berkeley.net
+ * appended — so the tab can be a plain list of names or full addresses, with or
+ * without a header row. (A stray label like "email" becomes
+ * "email@berkeley.net", which matches nobody's login and is harmless.)
  */
 function readAdmins() {
   var sheet = spreadsheet().getSheetByName(ADMINS_SHEET);
@@ -182,8 +184,8 @@ function readAdmins() {
   if (!sheet) return out;
   sheet.getDataRange().getValues().forEach(function (row) {
     row.forEach(function (cell) {
-      var email = normalizeEmail(cell);
-      if (email.indexOf('@') !== -1) out.add(email);
+      var email = qualifyEmail(cell);
+      if (isEmailShaped(email)) out.add(email);
     });
   });
   return out;
@@ -225,6 +227,20 @@ function slugify(s) {
 
 function normalizeEmail(s) {
   return String(s || '').trim().toLowerCase();
+}
+
+// Normalize an email or bare username: trim + lowercase, and append
+// @berkeley.net when no domain is given, so "peterseibel" becomes
+// "peterseibel@berkeley.net". Used for both the admins tab and ?as=.
+function qualifyEmail(s) {
+  var v = normalizeEmail(s);
+  if (!v) return '';
+  if (v.indexOf('@') === -1) v = v + '@berkeley.net';
+  return v;
+}
+
+function isEmailShaped(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
 function isBerkeleyStaff(email) {

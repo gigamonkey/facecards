@@ -466,6 +466,18 @@ function sizedThumbnail(fileId) {
   }
 }
 
+/**
+ * Run once from the editor to grant the script.external_request scope. Apps
+ * Script only prompts for a scope when a function that uses it runs, and
+ * getPhoto (the only UrlFetchApp caller) needs a fileId — so this makes a
+ * trivial fetch to trigger the consent. After granting, the deployed web app
+ * (which runs as you) can fetch sized thumbnails.
+ */
+function grantExternalRequest() {
+  UrlFetchApp.fetch('https://www.google.com/generate_204', { muteHttpExceptions: true });
+  Logger.log('UrlFetchApp works — external_request is granted.');
+}
+
 /* ------------------------------------------------------------------ */
 /* Spreadsheet helpers                                                 */
 /* ------------------------------------------------------------------ */

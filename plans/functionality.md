@@ -42,8 +42,9 @@ live; unchecked items are planned.
       name (the teacher is matched by last name, username, or full email)
 
 - [x] `?shared` shows an overview: every teacher the current teacher shares
-      students with, each as a face grid, with the teacher's name linking to
-      their `?shared-with=` page
+      students with, each as a face grid (plus the other teacher's distinct
+      classes for those students), with the teacher's name linking to their
+      `?shared-with=` page
 
 ## Study modes
 

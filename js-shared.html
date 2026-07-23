@@ -109,6 +109,10 @@
       h2.appendChild(link);
       wrap.appendChild(h2);
 
+      if (t.classes && t.classes.length) {
+        wrap.appendChild(el('p', 'shared-classes', t.classes.join(', ')));
+      }
+
       var faces = el('div', 'faces');
       t.students.forEach(function (s) {
         var card = buildCard(s, { showNumber: true, nameWithFirst: false, hideClass: true });

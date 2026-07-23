@@ -338,14 +338,27 @@ function buildSharedOverview(currentEmail) {
   var rows = readStudents();
   var photos = readPhotoMap();
 
+  var classIndex = {}; // slug -> { name, period, teacherEmail, courses }
   var teachersOf = {}; // studentNumber -> Set(teacherEmail)
+  var slugsFor = {}; // studentNumber -> Set(slug)
   var info = {}; // studentNumber -> identity fields
 
   rows.forEach(function (s) {
     var email = normalizeEmail(s.teacherEmail);
     if (!email) return;
     var num = String(s.studentNumber);
+    var slug = slugify(s.room + '-p-' + s.period + '-' + email.replace(/@.*$/, ''));
+
+    if (!classIndex[slug]) {
+      classIndex[slug] = { period: s.period, teacherEmail: email, courses: [] };
+    }
+    var course = String(s.course || '');
+    if (course && classIndex[slug].courses.indexOf(course) === -1) {
+      classIndex[slug].courses.push(course);
+    }
+
     (teachersOf[num] = teachersOf[num] || new Set()).add(email);
+    (slugsFor[num] = slugsFor[num] || new Set()).add(slug);
     if (!info[num]) {
       info[num] = {
         studentNumber: num,
@@ -357,6 +370,12 @@ function buildSharedOverview(currentEmail) {
         fileId: photos[num] || '',
       };
     }
+  });
+
+  Object.keys(classIndex).forEach(function (slug) {
+    var c = classIndex[slug];
+    c.courses.sort(function (a, b) { return a.localeCompare(b); });
+    c.name = c.courses.join(' / ') + ' Period ' + c.period;
   });
 
   // For each of the viewer's students, add them under every other teacher who
@@ -373,7 +392,9 @@ function buildSharedOverview(currentEmail) {
 
   var teachers = Object.keys(byTeacher).map(function (email) {
     var names = teacherNames(rows, new Set([email]));
-    var students = byTeacher[email]
+    var nums = byTeacher[email];
+
+    var students = nums
       .map(function (num) {
         return info[num];
       })
@@ -383,10 +404,30 @@ function buildSharedOverview(currentEmail) {
           String(a.firstName).localeCompare(String(b.firstName))
         );
       });
+
+    // Distinct classes this teacher has the shared students in.
+    var seen = {};
+    var classes = [];
+    nums.forEach(function (num) {
+      slugsFor[num].forEach(function (slug) {
+        var c = classIndex[slug];
+        if (c.teacherEmail === email && !seen[c.name]) {
+          seen[c.name] = true;
+          classes.push(c);
+        }
+      });
+    });
+    classes.sort(function (a, b) {
+      return periodNum(a.period) - periodNum(b.period) || a.name.localeCompare(b.name);
+    });
+
     return {
       key: email.replace(/@.*$/, ''), // username → ?shared-with=<key>
       last: names.last,
       full: names.full,
+      classes: classes.map(function (c) {
+        return c.name;
+      }),
       students: students,
     };
   });

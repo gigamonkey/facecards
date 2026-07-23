@@ -147,7 +147,12 @@
       app.appendChild(help);
 
       var cards = students.map(function (s) {
-        return buildCard(s, { showNumber: false, nameWithFirst: true, defer: true });
+        return buildCard(s, {
+          showNumber: false,
+          nameWithFirst: true,
+          defer: true,
+          initialsAlt: true,
+        });
       });
 
       var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);

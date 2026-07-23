@@ -16,13 +16,17 @@
   //                     student spans several classes).
   // opts.defer:         don't load the photo yet — loadCardImage fetches it via
   //                     the script (proxy) when the card is shown (study mode).
+  // opts.initialsAlt:   alt text is just the student's initials, not their name,
+  //                     so a not-yet-loaded study card doesn't reveal the answer.
   // Mirrors views/index.njk and views/study.njk.
   function buildCard(s, opts) {
     opts = opts || {};
     var card = el('div', 'card');
 
     var img = el('img');
-    img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+    img.alt = opts.initialsAlt
+      ? ((s.firstName || '').charAt(0) + (s.lastName || '').charAt(0)).toUpperCase()
+      : (s.firstName || '') + ' ' + (s.lastName || '');
     img.loading = 'lazy';
     if (s.fileId) {
       if (opts.defer) img.dataset.fileid = s.fileId; // fetched via proxy when shown

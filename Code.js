@@ -87,23 +87,30 @@ function buildModel(email) {
   var classes = {};
   var teacherLast = '';
 
+  // A "class" is the group of students a teacher sees together — one room at one
+  // period. Several course codes can share that slot (e.g. Biology + Biology H),
+  // so we key on room + period and collect the distinct course names for the
+  // display name.
   rows.forEach(function (s) {
     var lastName = String(s.teacherName || '').replace(/,.*$/, '');
     var teacher = String(s.teacherEmail || '').replace(/@.*$/, '').toLowerCase();
-    var slug = slugify(s.course + '-p-' + s.period + '-' + teacher);
+    var slug = slugify(s.room + '-p-' + s.period + '-' + teacher);
     teacherLast = lastName;
 
     if (!(slug in classes)) {
       classes[slug] = {
         slug: slug,
-        name: s.course + ' Period ' + s.period + ' (' + lastName + ')',
-        course: s.course,
+        room: s.room,
         period: s.period,
         teacherLast: lastName,
+        courses: [], // distinct course names sharing this room + period
         students: [],
       };
     }
-    classes[slug].students.push({
+    var c = classes[slug];
+    var course = String(s.course || '');
+    if (course && c.courses.indexOf(course) === -1) c.courses.push(course);
+    c.students.push({
       studentNumber: String(s.studentNumber),
       firstName: s.firstName,
       lastName: s.lastName,
@@ -114,6 +121,15 @@ function buildModel(email) {
       period: s.period,
       fileId: photos[String(s.studentNumber)] || '',
     });
+  });
+
+  // Name each class from its course list: "Biology / Biology H Period 2".
+  Object.keys(classes).forEach(function (slug) {
+    var c = classes[slug];
+    c.courses.sort(function (a, b) {
+      return a.localeCompare(b);
+    });
+    c.name = c.courses.join(' / ') + ' Period ' + c.period;
   });
 
   return { teacherLast: teacherLast, classes: classes };

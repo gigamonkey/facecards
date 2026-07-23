@@ -47,7 +47,7 @@
       var verb = mode === 'learn' ? 'Learn' : 'Review';
       if (scope === 'class' && MODEL.classes[id]) {
         var c = MODEL.classes[id];
-        return verb + ': ' + c.course + ' Period ' + c.period;
+        return verb + ': ' + c.name;
       }
       return verb + ': all my students';
     }

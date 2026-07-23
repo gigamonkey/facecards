@@ -18,6 +18,10 @@ live; unchecked items are planned.
 
 - [x] Home page shows the teacher's classes as grids of student photo cards
 
+- [x] Classes are grouped by room + period (per teacher); the class name
+      concatenates the distinct course names sharing that slot
+      (e.g. `Biology / Biology H Period 2`)
+
 - [x] Clicking a card flips it between the photo and the student's info
       (name, nickname, grade/gender, course/period, student number)
 
@@ -62,9 +66,6 @@ live; unchecked items are planned.
       by running `refreshPhotoMap` after uploading new images
 
 ## Planned
-
-- [ ] Classes are groupd by room and period and the name is made by
-      concatenation if there are multiple names.
 
 - [ ] `?shared-with=teachername` gives a grid of students shared between the
       user and the other named teacher.

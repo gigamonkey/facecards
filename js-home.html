@@ -26,7 +26,7 @@
     Object.keys(model.classes).forEach(function (slug) {
       var c = model.classes[slug];
 
-      var h2 = el('h2', null, c.course + ' Period ' + c.period);
+      var h2 = el('h2', null, c.name);
       var buttons = el('span', 'buttons');
       buttons.appendChild(
         studyLink('learn', function () {

@@ -122,8 +122,15 @@
   body.view-home h1 {
     margin: 1em 0 0.3em;
   }
-  body.view-home h2 {
+  body.view-home .class-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1em;
     margin: 1em 0 0.3em;
+  }
+  body.view-home .class-head h2 {
+    margin: 0;
   }
   body.view-home .faces {
     display: flex;
@@ -449,7 +456,10 @@
     body.view-home .teacher-name {
       display: none; /* the navbar already says where you are */
     }
-    body.view-home h2 {
+    body.view-home .class-head {
+      display: block; /* stack heading + buttons on mobile */
+    }
+    body.view-home .class-head h2 {
       margin: 0.7em 0 0.3em;
       font-size: clamp(20px, 5.5vmin, 28px);
       font-weight: 400;

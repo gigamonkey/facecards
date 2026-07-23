@@ -14,8 +14,7 @@
     Object.keys(model.classes).forEach(function (slug) {
       var c = model.classes[slug];
 
-      home.appendChild(el('h2', null, c.name));
-      home.appendChild(buttonsRow(onStudy, 'class', slug));
+      home.appendChild(classHead(c.name, onStudy, 'class', slug));
 
       var faces = el('div', 'faces');
       c.students
@@ -31,10 +30,18 @@
       home.appendChild(faces);
     });
 
-    home.appendChild(el('h2', null, 'All students'));
-    home.appendChild(buttonsRow(onStudy, 'all', ''));
+    home.appendChild(classHead('All students', onStudy, 'all', ''));
 
     container.appendChild(home);
+  }
+
+  // A class heading with its Learn/Review buttons — on one row (desktop) or
+  // stacked (mobile), controlled by CSS.
+  function classHead(name, onStudy, scope, id) {
+    var head = el('div', 'class-head');
+    head.appendChild(el('h2', null, name));
+    head.appendChild(buttonsRow(onStudy, scope, id));
+    return head;
   }
 
   // A Learn/Review button pair for a study scope.

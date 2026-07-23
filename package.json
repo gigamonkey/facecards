@@ -3,5 +3,8 @@
   "version": "2.0.0",
   "description": "Facecards — a Google Apps Script web app for learning student names and faces",
   "private": true,
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@google/clasp": "^3.3.0"
+  }
 }

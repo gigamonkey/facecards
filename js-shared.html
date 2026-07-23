@@ -213,14 +213,35 @@
     }
 
     var startX = null;
-    stage.addEventListener('touchstart', function (e) {
+    var startY = null;
+    function onStart(e) {
       startX = e.touches[0].clientX;
-    });
-    stage.addEventListener('touchend', function (e) {
+      startY = e.touches[0].clientY;
+    }
+    function onMove(e) {
+      if (startX === null) return;
+      var t = e.touches[0];
+      // Horizontal intent: prevent the browser from scrolling/back-swiping and
+      // cancelling the gesture (which would fire touchcancel, not touchend).
+      if (Math.abs(t.clientX - startX) > Math.abs(t.clientY - startY)) {
+        e.preventDefault();
+      }
+    }
+    function onEnd(e) {
       if (startX === null) return;
       var dx = e.changedTouches[0].clientX - startX;
       startX = null;
       if (Math.abs(dx) > 40) show(dx < 0 ? idx + 1 : idx - 1);
+    }
+    stage.addEventListener('touchstart', onStart, { passive: true });
+    stage.addEventListener('touchmove', onMove, { passive: false });
+    stage.addEventListener('touchend', onEnd);
+    stage.addEventListener('touchcancel', onEnd);
+
+    // Arrow keys too (handy for testing on a desktop-sized window).
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') show(idx + 1);
+      else if (e.key === 'ArrowLeft') show(idx - 1);
     });
 
     show(0);

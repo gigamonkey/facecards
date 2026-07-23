@@ -171,14 +171,20 @@ function readPhotoMap() {
   return map;
 }
 
-/** Lowercased Set of admin emails from the `admins` tab. */
+/**
+ * Lowercased Set of admin emails from the `admins` tab. Reads every cell and
+ * keeps anything that looks like an email, so the tab can be a plain list with
+ * or without a header row (a header like "email" has no "@" and is ignored).
+ */
 function readAdmins() {
   var sheet = spreadsheet().getSheetByName(ADMINS_SHEET);
   var out = new Set();
   if (!sheet) return out;
-  sheetToObjects(sheet).forEach(function (r) {
-    var email = normalizeEmail(r.email);
-    if (email) out.add(email);
+  sheet.getDataRange().getValues().forEach(function (row) {
+    row.forEach(function (cell) {
+      var email = normalizeEmail(cell);
+      if (email.indexOf('@') !== -1) out.add(email);
+    });
   });
   return out;
 }

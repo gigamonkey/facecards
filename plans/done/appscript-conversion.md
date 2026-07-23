@@ -357,3 +357,38 @@ page), `js-dom.html`, `js-random.html`, `js-home.html`, `js-learn.html`,
 1. **Volunteers** — v1 is strictly `@berkeley.net`; the hardcoded volunteer is
    dropped. Proper per-section volunteer access is a v2 feature (see above).
 2. **Photos tab refresh** — manual run from the Apps Script editor; no automation.
+
+## Changes to the plan
+
+Implemented and deployed as an Apps Script web app on the `app-script` branch.
+Notable deviations from the plan as written:
+
+- **Drive scope had to be full `auth/drive`, not `drive.readonly`.** `DriveApp`
+  won't resolve `getFolderById` with only `drive.readonly` (fails with
+  "Unexpected error while getting the method or property … on object DriveApp").
+  `appsscript.json` uses `https://www.googleapis.com/auth/drive`. The code still
+  only reads Drive.
+
+- **Admins tab is header-less and forgiving.** The plan specified an `email`
+  header read via the header row. In practice a case-sensitive `email` header
+  was too fragile, so `readAdmins` now scans every cell and keeps anything
+  email-shaped. Added `qualifyEmail`: bare usernames get `@berkeley.net`
+  appended, applied to **both** the admins tab and the `?as=` parameter, and the
+  "view as" inputs are `type=text` so bare names submit. So the tab can be a
+  plain list of usernames or full addresses.
+
+- **Image throttling mitigations were not needed.** The lazy study-mode loading,
+  grid `onerror` retry, and script-proxy fallback discussed as contingencies
+  were not built: the home photo grid loaded cleanly at real class sizes on a
+  hard refresh, so the plain `drive.google.com/thumbnail` URLs were kept. See
+  next-steps for the trigger to revisit.
+
+- **`refreshPhotoMap` kept on `DriveApp`** (not the Drive Advanced Service). It
+  iterates the folder file-by-file; ~3,000 files runs in ~1–3 min, under the
+  6-minute cap. See next-steps for the faster rewrite if it ever times out.
+
+- **Operational note:** changing `appsscript.json` makes `clasp push` prompt to
+  overwrite the manifest, which hug runs non-interactively (prints "Skipping
+  push."). Use `hug push -f` after a manifest change. Code-only changes reach the
+  live `/exec` URL via `hug deploy` (the `@1` deployment is pinned to a version;
+  a plain push only updates the HEAD test deployment).

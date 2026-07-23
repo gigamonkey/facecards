@@ -338,27 +338,23 @@ function buildSharedOverview(currentEmail) {
   var rows = readStudents();
   var photos = readPhotoMap();
 
-  var classIndex = {}; // slug -> { name, period, teacherEmail, courses }
   var teachersOf = {}; // studentNumber -> Set(teacherEmail)
-  var slugsFor = {}; // studentNumber -> Set(slug)
+  var coursesOf = {}; // "studentNumber|teacherEmail" -> Set(course)
   var info = {}; // studentNumber -> identity fields
 
   rows.forEach(function (s) {
     var email = normalizeEmail(s.teacherEmail);
     if (!email) return;
     var num = String(s.studentNumber);
-    var slug = slugify(s.room + '-p-' + s.period + '-' + email.replace(/@.*$/, ''));
-
-    if (!classIndex[slug]) {
-      classIndex[slug] = { period: s.period, teacherEmail: email, courses: [] };
-    }
-    var course = String(s.course || '');
-    if (course && classIndex[slug].courses.indexOf(course) === -1) {
-      classIndex[slug].courses.push(course);
-    }
 
     (teachersOf[num] = teachersOf[num] || new Set()).add(email);
-    (slugsFor[num] = slugsFor[num] || new Set()).add(slug);
+
+    var course = String(s.course || '').trim();
+    if (course) {
+      var k = num + '|' + email;
+      (coursesOf[k] = coursesOf[k] || new Set()).add(course);
+    }
+
     if (!info[num]) {
       info[num] = {
         studentNumber: num,
@@ -370,12 +366,6 @@ function buildSharedOverview(currentEmail) {
         fileId: photos[num] || '',
       };
     }
-  });
-
-  Object.keys(classIndex).forEach(function (slug) {
-    var c = classIndex[slug];
-    c.courses.sort(function (a, b) { return a.localeCompare(b); });
-    c.name = c.courses.join(' / ') + ' Period ' + c.period;
   });
 
   // For each of the viewer's students, add them under every other teacher who
@@ -405,29 +395,26 @@ function buildSharedOverview(currentEmail) {
         );
       });
 
-    // Distinct classes this teacher has the shared students in.
-    var seen = {};
-    var classes = [];
+    // Distinct course names the shared students take with this teacher, no
+    // period — "Spanish II" once, however many periods it runs.
+    var courseSet = {};
     nums.forEach(function (num) {
-      slugsFor[num].forEach(function (slug) {
-        var c = classIndex[slug];
-        if (c.teacherEmail === email && !seen[c.name]) {
-          seen[c.name] = true;
-          classes.push(c);
-        }
-      });
+      var set = coursesOf[num + '|' + email];
+      if (set) {
+        set.forEach(function (c) {
+          courseSet[c] = true;
+        });
+      }
     });
-    classes.sort(function (a, b) {
-      return periodNum(a.period) - periodNum(b.period) || a.name.localeCompare(b.name);
+    var courses = Object.keys(courseSet).sort(function (a, b) {
+      return a.localeCompare(b);
     });
 
     return {
       key: email.replace(/@.*$/, ''), // username → ?shared-with=<key>
       last: names.last,
       full: names.full,
-      classes: classes.map(function (c) {
-        return c.name;
-      }),
+      courses: courses,
       students: students,
     };
   });

@@ -128,6 +128,10 @@
     justify-content: space-between;
     gap: 1em;
     margin: 1em 0 0.3em;
+    /* Round the row down to a whole number of card columns (172px card + 3px
+       gap = 175px) so the buttons' right edge lines up with the last picture
+       column. Falls back to full width where round() is unsupported. */
+    width: calc(round(down, 100% + 3px, 175px) - 3px);
   }
   body.view-home .class-head h2 {
     margin: 0;
@@ -145,6 +149,8 @@
     height: 100%;
   }
   .buttons {
+    display: flex;
+    gap: 0.5em;
     font-size: 1rem;
   }
   .buttons a {
@@ -458,6 +464,7 @@
     }
     body.view-home .class-head {
       display: block; /* stack heading + buttons on mobile */
+      width: auto; /* full width; buttons stay half-and-half */
     }
     body.view-home .class-head h2 {
       margin: 0.7em 0 0.3em;

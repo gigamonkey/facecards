@@ -1,0 +1,8 @@
+# Push only the Apps Script sources to the project; ignore everything else
+# (node_modules, plans/, docs, git metadata, etc.).
+**/**
+
+!appsscript.json
+!Code.js
+!config.js
+!*.html

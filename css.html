@@ -1,0 +1,207 @@
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap');
+
+  html {
+    box-sizing: border-box;
+    font-family: Jost, system-ui, sans-serif;
+  }
+  *,
+  *:before,
+  *:after {
+    box-sizing: inherit;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* ---- Shared card ---- */
+  .card {
+    width: 172px;
+  }
+  .card img {
+    width: 172px;
+    height: auto;
+    display: block;
+    background: #dde;
+    min-height: 120px;
+  }
+  .back .name {
+    font-size: 1.5em;
+    font-weight: 400;
+  }
+  .back p {
+    text-align: center;
+  }
+
+  /* ---- Impersonation / admin banner ---- */
+  #banner:empty {
+    display: none;
+  }
+  #banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: #443;
+    color: #fff;
+    font: 400 0.85rem/1.4 sans-serif;
+    padding: 5px 10px;
+    display: flex;
+    gap: 0.75em;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  #banner a {
+    color: #cdf;
+  }
+  #banner form {
+    display: inline-flex;
+    gap: 0.4em;
+    align-items: center;
+    margin-left: auto;
+  }
+  #banner input {
+    font: inherit;
+    padding: 1px 4px;
+  }
+
+  /* ---- Home view ---- */
+  body.view-home {
+    width: 90%;
+    margin: 1in auto;
+    padding: 2em 2em 5em;
+    background: #eeeefa;
+    border-radius: 12px;
+  }
+  body.view-home h1,
+  body.view-home h2 {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+  }
+  body.view-home h1 {
+    margin: 1em 0 0;
+  }
+  body.view-home h2 {
+    margin: 1em 0;
+  }
+  body.view-home .faces {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  body.view-home .back {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+  }
+  .buttons {
+    font-size: 1rem;
+  }
+  .buttons a {
+    display: inline-block;
+    border: 1px solid grey;
+    text-decoration: none;
+    font-family: sans-serif;
+    border-radius: 6px;
+    padding: 3px;
+    background: #ddf;
+    font-weight: 300;
+    cursor: pointer;
+  }
+
+  /* ---- Study view ---- */
+  body.view-study {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-content: center;
+    width: calc(min(40em, 80%));
+    margin: 5vh auto;
+    background: #eeeefa;
+    border-radius: 12px;
+    text-align: center;
+    height: 90vh;
+  }
+  body.view-study .back {
+    display: none;
+  }
+  #study-header {
+    display: flex;
+    gap: 0.75em;
+    align-items: center;
+    padding: 0.75em;
+  }
+  #study-header a {
+    cursor: pointer;
+  }
+  #current {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 1em;
+  }
+  #instructions {
+    font-style: italic;
+    font-size: 90%;
+    border: 1px dotted black;
+    background: #ddd;
+    padding: 1em;
+    margin: 1em;
+  }
+
+  /* ---- Landing view ---- */
+  body.view-landing {
+    width: 90%;
+    max-width: 40em;
+    margin: 15vh auto;
+    padding: 2em;
+    background: #eeeefa;
+    border-radius: 12px;
+    font-size: 1.1rem;
+  }
+  body.view-landing h1 {
+    margin-bottom: 0.5em;
+  }
+  body.view-landing p {
+    margin: 0.75em 0;
+  }
+  body.view-landing form {
+    margin-top: 1.5em;
+    display: flex;
+    gap: 0.5em;
+    align-items: center;
+  }
+
+  @media (width <= 600px) {
+    html {
+      font-size: 2.2vmin;
+    }
+    body.view-home {
+      display: flex;
+      flex-direction: column;
+      justify-content: start;
+      width: 100vw;
+      gap: 0.25vh;
+      padding: 1em;
+      margin: 5vh auto;
+      text-align: center;
+      height: auto;
+    }
+    body.view-home h2 {
+      margin-left: 1em;
+    }
+    body.view-home div.faces {
+      display: none;
+    }
+    body.view-study h1 {
+      font-size: 12px;
+    }
+    #instructions {
+      display: none;
+    }
+  }
+</style>

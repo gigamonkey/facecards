@@ -1,0 +1,84 @@
+<script>
+  // "Learn" engine: Leitner boxes whose sizes follow the Fibonacci sequence.
+  // A correct answer promotes a card to the next row; a wrong answer sends it
+  // back to the deck. Ported verbatim from public/js/learn.js (de-moduled).
+
+  function LearnRow(size) {
+    this.size = size;
+    this.cards = [];
+  }
+  LearnRow.prototype.isOverfull = function () {
+    return this.cards.length > this.size;
+  };
+  LearnRow.prototype.next = function () {
+    return this.cards.pop();
+  };
+  LearnRow.prototype.add = function (card) {
+    this.cards.unshift(card);
+  };
+
+  function LearnState(cards) {
+    this.deck = shuffled(cards);
+    this.row = 0;
+    this.rows = [];
+
+    var a = 0;
+    var b = 1;
+    while (a < this.deck.length) {
+      this.rows.push(new LearnRow(a));
+      var t = a + b;
+      a = b;
+      b = t;
+    }
+    this.rows.push(new LearnRow(a));
+
+    this.steps = this.deck.length * this.rows.length;
+  }
+
+  LearnState.prototype.firstRow = function () {
+    return this.rows[0];
+  };
+
+  LearnState.prototype.currentRow = function () {
+    return this.rows[this.row];
+  };
+
+  LearnState.prototype.next = function () {
+    // Emptied the deck and only one, not-overfull row remains: everything has
+    // been moved into a sufficiently large row, so we're done.
+    if (
+      this.deck.length === 0 &&
+      this.rows.length === 1 &&
+      !this.currentRow().isOverfull()
+    ) {
+      return null;
+    }
+
+    // Mid-promotion, or a wrong answer just reset us to row 0: drain overfull.
+    if (this.currentRow().isOverfull()) {
+      return this.currentRow().next();
+    }
+
+    // Back at a non-overfull row 0: refill from the deck, or if the deck is
+    // empty promote the next row up to become the deck.
+    if (this.deck.length > 0) {
+      this.firstRow().add(this.deck.pop());
+    } else {
+      this.deck = this.rows.shift().cards;
+    }
+    return this.next();
+  };
+
+  LearnState.prototype.correct = function (card) {
+    this.row++;
+    this.currentRow().add(card);
+    if (!this.currentRow().isOverfull()) {
+      this.row = 0;
+    }
+  };
+
+  LearnState.prototype.incorrect = function (card) {
+    this.row = 0;
+    this.deck.push(card);
+  };
+</script>

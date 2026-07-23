@@ -1,0 +1,64 @@
+<script>
+  // Shared study driver for learn/review (merges the duplicated event handling
+  // from public/js/learn.js and public/js/review.js). First input reveals the
+  // card back; when the back is showing, left = wrong, right = correct.
+  // Advances via arrow keys or touch swipes. Returns a teardown() that removes
+  // the listeners so leaving study mode doesn't hijack the home view.
+  function runStudy(state, currentEl) {
+    var current = null;
+
+    function advance() {
+      current = state.next();
+      if (current === null) {
+        currentEl.textContent = state.doneMessage ? state.doneMessage() : 'Done!';
+      } else {
+        currentEl.replaceChildren(current);
+      }
+    }
+
+    function handle(direction) {
+      if (!current) return;
+      var back = current.querySelector('.back');
+      if (getComputedStyle(back).display === 'none') {
+        back.style.display = 'block';
+      } else {
+        if (direction === 'left') state.incorrect(current);
+        else if (direction === 'right') state.correct(current);
+        else return; // no swipe/neutral key: leave the back showing
+        back.style.display = 'none';
+        advance();
+      }
+    }
+
+    var touchStart;
+    function onTouchStart(e) {
+      touchStart = e.touches[0].clientX;
+    }
+    function onTouchEnd(e) {
+      var end = e.changedTouches[0].clientX;
+      if (Math.abs(end - touchStart) > 50) handle(end > touchStart ? 'right' : 'left');
+      else handle('none');
+    }
+    function onTouchMove(e) {
+      e.preventDefault(); // suppress scrolling while studying
+    }
+    function onKeyDown(e) {
+      var dir = e.code === 'ArrowLeft' ? 'left' : e.code === 'ArrowRight' ? 'right' : 'none';
+      handle(dir);
+    }
+
+    document.body.addEventListener('touchstart', onTouchStart);
+    document.body.addEventListener('touchend', onTouchEnd);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    window.addEventListener('keydown', onKeyDown);
+
+    advance();
+
+    return function teardown() {
+      document.body.removeEventListener('touchstart', onTouchStart);
+      document.body.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('touchmove', onTouchMove, { passive: false });
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }
+</script>

@@ -1,0 +1,88 @@
+<script>
+  // Render the home view: the viewer's classes as photo-card grids, with
+  // learn/review links per class and for all of their students. Port of
+  // views/index.njk (minus the outer per-teacher loop — it's one teacher).
+
+  function renderHome(container, model, onStudy) {
+    container.innerHTML = '';
+    var home = el('div');
+    home.id = 'home';
+
+    var h1 = el('h1', null, model.teacherLast || 'My students');
+    var allButtons = el('span', 'buttons');
+    allButtons.appendChild(
+      studyLink('learn all', function () {
+        onStudy('learn', 'all', '');
+      }),
+    );
+    allButtons.appendChild(
+      studyLink('review all', function () {
+        onStudy('review', 'all', '');
+      }),
+    );
+    h1.appendChild(allButtons);
+    home.appendChild(h1);
+
+    Object.keys(model.classes).forEach(function (slug) {
+      var c = model.classes[slug];
+
+      var h2 = el('h2', null, c.course + ' Period ' + c.period);
+      var buttons = el('span', 'buttons');
+      buttons.appendChild(
+        studyLink('learn', function () {
+          onStudy('learn', 'class', slug);
+        }),
+      );
+      buttons.appendChild(
+        studyLink('review', function () {
+          onStudy('review', 'class', slug);
+        }),
+      );
+      h2.appendChild(buttons);
+      home.appendChild(h2);
+
+      var faces = el('div', 'faces');
+      c.students
+        .slice()
+        .sort(function (a, b) {
+          return String(a.firstName).localeCompare(String(b.firstName));
+        })
+        .forEach(function (s) {
+          var card = buildCard(s, { showNumber: true, nameWithFirst: false });
+          attachFlip(card);
+          faces.appendChild(card);
+        });
+      home.appendChild(faces);
+    });
+
+    container.appendChild(home);
+  }
+
+  function studyLink(text, handler) {
+    var a = el('a', null, text);
+    a.href = '#';
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      handler();
+    });
+    return a;
+  }
+
+  // Flip a card between photo and info on click (port of public/js/index.js).
+  function attachFlip(card) {
+    card.dataset.showing = 'front';
+    var img = card.querySelector('img');
+    var back = card.querySelector('.back');
+    card.onclick = function () {
+      if (card.dataset.showing === 'front') {
+        img.style.display = 'none';
+        back.style.display = 'flex';
+        card.dataset.showing = 'back';
+      } else {
+        img.style.display = 'block';
+        back.style.display = 'none';
+        card.dataset.showing = 'front';
+      }
+    };
+  }
+</script>

@@ -4,93 +4,96 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Facecards is a flashcard web app for Berkeley (`berkeley.net`) teachers to learn
-and review the names and faces of the students in their classes. Teachers sign
-in with Google, see their classes as grids of student photo cards, and drill
-themselves with two study modes.
+Facecards is a Google Apps Script web app that lets Berkeley (`berkeley.net`)
+teachers learn and review the names and faces of the students in their classes.
+Student data lives in a Google Sheet; student photos live in a Drive folder and
+are shown as `drive.google.com/thumbnail` URLs. Managed with
+[`hug`](https://github.com/gigamonkeys/hug) (a `clasp` wrapper) — see
+`/Users/peter/hacks/hug`.
 
-## Running
+(The app was previously an Express/Node server; that history is in git. See
+`plans/done/appscript-conversion.md` for the conversion rationale.)
 
-There is no `start` script and no test framework (`npm test` is a stub). Run the
-server directly with the required environment variables set:
+## Development with hug / clasp
+
+There is no local build or test step — it's Apps Script. Work happens against a
+live Apps Script project via `clasp` (through `hug`). Auth must be the
+**`berkeley.net` account** that owns the spreadsheet and photos, since the app
+deploys with domain access and `executeAs: USER_DEPLOYING`.
 
 ```bash
-node index.js
+npx clasp login          # once, as the berkeley.net account
+hug push                 # push local files to the Apps Script project
+hug open                 # open the editor in the browser
+hug deploy "message"     # push + version + update the web-app deployment
+hug config set K=V       # write config.js (CONFIG.*) — resource IDs
+hug pull [-f]            # pull remote (refuses on dirty tree without -f)
 ```
 
-Required env vars (loaded via `dotenv/config`, imported in `google-oauth.js`):
+`config.js` (managed by `hug config`, committed to git) holds `CONFIG.SPREADSHEET_ID`
+and `CONFIG.DRIVE_FOLDER_ID`. `.clasp.json` is per-branch (hug's
+branch-per-environment pattern) and is committed. `.claspignore` restricts the
+push to the Apps Script sources — only `appsscript.json`, `Code.js`, `config.js`,
+and the `*.html` files are pushed.
 
-- `PORT` — port to listen on
-- `SECRET` — express-session secret
-- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URL` — Google OAuth
+## Apps Script constraints that shape the code
 
-Format code with Prettier (`npx prettier`); `.prettierrc` has a `*.njk` override
-(HTML parser, 80 cols).
-
-This is an ESM project (`"type": "module"`) — use `import`, not `require`.
-
-## Required runtime data (not in git)
-
-The app depends on two things that are gitignored and must be provided out of
-band (image management and generation were stripped from this branch — see
-commit `4be40c6`):
-
-- `students.tsv` — read once at startup by `index.js`. Every class/teacher/auth
-  data structure is derived from it, so the server will not start without it.
-  Columns referenced in code: `course`, `period`, `teacherName`,
-  `teacherEmail`, `firstName`, `lastName`, `nickname`, `grade`, `gender`,
-  `studentNumber`.
-- `public/images/{studentNumber}.jpg` — one photo per student, served
-  statically and referenced by templates.
+- **One entry point.** A web app is a single `doGet(e)` with one fixed URL, no
+  path routing. "Routes" are query params (`?mode=…&scope=…&id=…`), read from
+  `e.parameter`. Navigation between home and study is client-side (SPA), no reload.
+- **No ES modules; client JS only lives in `.html`.** Each former
+  `public/js/*.js` module is now a `js-*.html` partial wrapping a `<script>` of
+  globals (no `import`/`export`), inlined into `index.html` via the `include()`
+  helper in dependency order (see the include list at the bottom of `index.html`).
+- **No static assets.** CSS is inlined via `css.html`; images come from Drive
+  thumbnail URLs, not a served directory.
 
 ## Architecture
 
-Single Express server, all routing and startup in `index.js`. No database:
-`students.tsv` is loaded once at boot and reduced into in-memory maps.
+**Server (`Code.js`).** `doGet(e)`:
 
-**Data model (built once at startup in `index.js`):** iterating the TSV rows
-produces:
+1. Authorizes: `Session.getActiveUser().getEmail()` must match exactly
+   `@berkeley.net` (`isBerkeleyStaff`) — deliberately excludes
+   `@students.berkeley.net`. The DOMAIN deployment setting is the coarse gate;
+   this is the real one.
+2. Resolves the **effective email** — an admin (listed in the `admins` sheet
+   tab, read by `readAdmins`) may impersonate anyone via `?as=`; a non-admin's
+   `?as=` is ignored server-side.
+3. `buildModel(effective)` reads the sheet and reduces it to `{ teacherLast,
+   classes }` **scoped to only that email's own sections** (rows where
+   `teacherEmail` matches). Other teachers' rows are never sent to the client.
+4. If the scoped model has no classes → renders `landing.html` ("contact Mr.
+   Seibel"). Otherwise injects the model + route + context as JSON into
+   `index.html` (via `<?!= jsonForScript(...) ?>`) for one-shot client rendering.
 
-- `classes` — keyed by a `slugify(course-p-period-teacher)` slug; each holds its
-  student rows.
-- `teachers` — keyed by the local part of the teacher email; each holds its
-  classes and students.
-- `emails` — the authorization allowlist. Seeded with every `teacherEmail` from
-  the TSV; extra individuals (e.g. volunteers) are added by hand in `index.js`
-  (see the `emails['...@volunteers.berkeley.net'] = true` line).
-- `users` — in-memory session user store (populated by passport
-  serialize/deserialize).
+`refreshPhotoMap()` is run manually from the editor when photos change: it scans
+`CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files and writes the
+`studentNumber → fileId` map into the `photos` sheet tab, so `doGet` never hits
+the Drive API at request time.
 
-**Auth (two gates, both must pass):**
+**Spreadsheet tabs** (in `CONFIG.SPREADSHEET_ID`, private to the deployer):
 
-1. `google-oauth.js` — passport Google strategy. Rejects any profile whose
-   hosted domain (`hd`) does not end in `berkeley.net`.
-2. `requireLogin` middleware in `index.js` — redirects anonymous users to
-   `/login`, then checks the authenticated email against the `emails` allowlist,
-   returning `403` if absent. Every content route is wrapped in `requireLogin`.
+- First tab — student rows (headers: `studentNumber`, `firstName`,
+  `middleName`, `lastName`, `nickname`, `period`, `course`, `gender`,
+  `teacherEmail`, `personId`, `grade`, `teacherName`). The student data must be
+  the **first** tab.
+- `photos` — generated `studentNumber`, `fileId`.
+- `admins` — one admin `email` per row (seed with `peterseibel@berkeley.net`).
 
-**Views (`nunjucks`, in `views/`):**
+**Client.** `index.html` bootstraps `window.MODEL/ROUTE/CTX` then includes, in
+order: `js-dom` (`$`, `$$`, `el`) → `js-random` (`shuffled`) → `js-cards`
+(`buildCard`, `thumbUrl`) → `js-study` (`runStudy` shared input/advance driver)
+→ `js-learn` (`LearnState` — Fibonacci-row Leitner engine) → `js-review`
+(`ReviewState` — single pass + missed requeue) → `js-home` (`renderHome`, card
+flip) → `js-app` (controller: `showHome`/`showStudy`, deep-link dispatch, admin
+banner). The `LearnState`/`ReviewState` engines are ports of the old
+`learn.js`/`review.js`; only their bootstrap changed (they now take a card array
+built from the injected JSON instead of scraping server-rendered DOM).
 
-- `index.njk` — home page; renders teachers → classes → student photo-card
-  grids with "learn"/"review" links.
-- `study.njk` — the study screen. It receives a `script` variable and loads
-  `/js/{{script}}.js`, so the same template drives both study modes.
+## Access / deployment facts
 
-**Study routes** share `study.njk` and pick the deck by URL shape. `/learn` and
-`/review` each come in three forms — bare (all students), `/p/:slug` (one
-class), `/t/:teacher` (all of a teacher's students) — and the leading path
-segment (`learn` or `review`) becomes the `script` variable.
-
-**Frontend (`public/js/`, ES modules, no build step):**
-
-- `index.js` — home page; click a card to flip photo ↔ info.
-- `learn.js` — "learn" mode. A Leitner-style spaced-repetition engine: cards
-  advance through rows sized by the Fibonacci sequence; a wrong answer sends a
-  card back to the deck. See the `State`/`Row` classes.
-- `review.js` — "review" mode. Simpler: run through the deck once, then re-run
-  only the missed cards until none remain ("Perfect run!" if none were missed).
-- Both study modes advance with left/right arrow keys or touch swipes (left =
-  wrong, right = correct); first keypress/tap reveals the card back.
-- `dom.js` — small DOM helper library (`$`, `$$`, element builders).
-- `random.js` — `shuffled()` Fisher–Yates.
-- `file-utils.js` — TSV/JSON load/dump helpers used server-side.
+- `appsscript.json`: `webapp.access: DOMAIN`, `executeAs: USER_DEPLOYING`.
+- Spreadsheet: shared only with the deployer (app reads it as the deployer).
+- Photos folder: shared **view-only with the domain** so browsers can load
+  thumbnail URLs. (Tradeoff: any domain account with a photo URL can view it.)
+- Deploy from the `berkeley.net` account, not `peter@gigamonkeys.com`.

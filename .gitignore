@@ -1,16 +1,6 @@
-!template.env
-*.csv
-*.db
-*.env
-*.jpeg
-*.jpg
-*.png
-*.tsv
-*.zip
-.cookie
-.junk
-client-secret.json
-images-*
 node_modules
-photos-*
-public/images/
+.DS_Store
+*.log
+
+# clasp local auth (global creds live in ~/.clasprc.json — never commit any)
+.clasprc.json

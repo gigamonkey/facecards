@@ -1,0 +1,32 @@
+<script>
+  // "Review" engine: run through the deck once, requeue missed cards, and
+  // repeat until nothing is missed. Ported from public/js/review.js.
+
+  function ReviewState(cards) {
+    this.deck = shuffled(cards);
+    this.missed = [];
+    this.done = [];
+    this.numberMissed = 0;
+  }
+
+  ReviewState.prototype.next = function () {
+    if (this.deck.length === 0 && this.missed.length > 0) {
+      this.deck = this.missed;
+      this.missed = [];
+    }
+    return this.deck.length > 0 ? this.deck.pop() : null;
+  };
+
+  ReviewState.prototype.correct = function (card) {
+    this.done.push(card);
+  };
+
+  ReviewState.prototype.incorrect = function (card) {
+    this.missed.push(card);
+    this.numberMissed++;
+  };
+
+  ReviewState.prototype.doneMessage = function () {
+    return 'Done!' + (this.numberMissed === 0 ? ' Perfect run!' : '');
+  };
+</script>

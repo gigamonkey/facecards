@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Facecards</title>
+    <?!= include('css'); ?>
+  </head>
+  <body class="view-landing">
+    <? if (ctx.impersonating) { ?>
+    <div id="banner">
+      <span>Viewing as <?= ctx.effective ?></span>
+      <? if (ctx.baseUrl) { ?>
+      <a href="<?= ctx.baseUrl ?>" target="_top">back to my view</a>
+      <? } ?>
+    </div>
+    <? } ?>
+
+    <div id="app">
+      <div id="landing">
+        <h1>Facecards</h1>
+        <? if (ctx.impersonating) { ?>
+        <p><?= ctx.effective ?> has no sections set up.</p>
+        <? } else { ?>
+        <p>You don't have any sections set up.</p>
+        <? } ?>
+        <p>
+          To get access, contact Mr. Seibel
+          &lt;<a href="mailto:peterseibel@berkeley.net">peterseibel@berkeley.net</a>&gt;.
+        </p>
+
+        <? if (ctx.isAdmin && ctx.baseUrl) { ?>
+        <form id="viewas" action="<?= ctx.baseUrl ?>" method="get" target="_top">
+          <label>View as <input name="as" type="email" placeholder="teacher@berkeley.net" required /></label>
+          <button type="submit">Go</button>
+        </form>
+        <? } ?>
+      </div>
+    </div>
+  </body>
+</html>

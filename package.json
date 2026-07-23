@@ -1,26 +1,7 @@
 {
   "name": "facecards",
-  "type": "module",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "dotenv": "^17.2.1",
-    "express": "^4.18.2",
-    "express-session": "^1.18.2",
-    "morgan": "^1.10.1",
-    "nunjucks": "^3.2.4",
-    "passport": "^0.7.0",
-    "passport-google-oauth20": "^2.0.0"
-  },
-  "devDependencies": {
-    "@flydotio/dockerfile": "^0.7.10",
-    "prettier": "^3.0.0"
-  }
+  "version": "2.0.0",
+  "description": "Facecards — a Google Apps Script web app for learning student names and faces",
+  "private": true,
+  "license": "MIT"
 }

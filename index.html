@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <base target="_top" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Facecards</title>
+    <?!= include('css'); ?>
+  </head>
+  <body>
+    <div id="banner"></div>
+    <div id="app"></div>
+
+    <script>
+      window.MODEL = <?!= modelJson ?>;
+      window.ROUTE = <?!= routeJson ?>;
+      window.CTX = <?!= ctxJson ?>;
+    </script>
+
+    <?!= include('js-dom'); ?>
+    <?!= include('js-random'); ?>
+    <?!= include('js-cards'); ?>
+    <?!= include('js-study'); ?>
+    <?!= include('js-learn'); ?>
+    <?!= include('js-review'); ?>
+    <?!= include('js-home'); ?>
+    <?!= include('js-app'); ?>
+  </body>
+</html>

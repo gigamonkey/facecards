@@ -1,0 +1,41 @@
+<script>
+  // Build the student photo-card DOM shared by the home grid and study modes.
+
+  function thumbUrl(fileId, size) {
+    return (
+      'https://drive.google.com/thumbnail?id=' +
+      encodeURIComponent(fileId) +
+      '&sz=w' +
+      (size || 400)
+    );
+  }
+
+  // opts.nameWithFirst: nickname line reads "Nick (First)" (study view).
+  // opts.showNumber:    append the student-number line (home view).
+  // Mirrors views/index.njk and views/study.njk.
+  function buildCard(s, opts) {
+    opts = opts || {};
+    var card = el('div', 'card');
+
+    var img = el('img');
+    img.alt = (s.firstName || '') + ' ' + (s.lastName || '');
+    img.loading = 'lazy';
+    if (s.fileId) img.src = thumbUrl(s.fileId, 400);
+    card.appendChild(img);
+
+    var back = el('div', 'back');
+    var nameText = s.nickname
+      ? opts.nameWithFirst
+        ? s.nickname + ' (' + s.firstName + ')'
+        : s.nickname
+      : s.firstName;
+    back.appendChild(el('p', 'name', nameText));
+    back.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
+    back.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
+    back.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
+    if (opts.showNumber) back.appendChild(el('p', null, String(s.studentNumber)));
+    card.appendChild(back);
+
+    return card;
+  }
+</script>

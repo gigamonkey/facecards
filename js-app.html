@@ -1,0 +1,140 @@
+<script>
+  // Client controller: single-page app that toggles between the home grid and a
+  // study session without reloading. Honors a server-provided deep link
+  // (window.ROUTE) on first load and renders the admin/impersonation banner
+  // (window.CTX).
+  (function () {
+    var MODEL = window.MODEL || { classes: {}, teacherLast: '' };
+    var ROUTE = window.ROUTE || { mode: 'home', scope: '', id: '' };
+    var CTX = window.CTX || {};
+
+    var app = document.getElementById('app');
+    var banner = document.getElementById('banner');
+    var teardownStudy = null;
+
+    renderBanner();
+
+    function setView(name) {
+      document.body.className = 'view-' + name;
+    }
+
+    function clearStudy() {
+      if (teardownStudy) {
+        teardownStudy();
+        teardownStudy = null;
+      }
+    }
+
+    function showHome() {
+      clearStudy();
+      setView('home');
+      renderHome(app, MODEL, showStudy);
+      window.scrollTo(0, 0);
+    }
+
+    function studentsFor(scope, id) {
+      if (scope === 'class' && MODEL.classes[id]) {
+        return MODEL.classes[id].students.slice();
+      }
+      var all = [];
+      Object.keys(MODEL.classes).forEach(function (slug) {
+        all = all.concat(MODEL.classes[slug].students);
+      });
+      return all;
+    }
+
+    function titleFor(mode, scope, id) {
+      var verb = mode === 'learn' ? 'Learn' : 'Review';
+      if (scope === 'class' && MODEL.classes[id]) {
+        var c = MODEL.classes[id];
+        return verb + ': ' + c.course + ' Period ' + c.period;
+      }
+      return verb + ': all my students';
+    }
+
+    function showStudy(mode, scope, id) {
+      clearStudy();
+      var students = studentsFor(scope, id);
+      if (!students.length) {
+        showHome(); // deep link to a class the viewer doesn't teach, etc.
+        return;
+      }
+
+      setView('study');
+      app.innerHTML = '';
+
+      var header = el('div');
+      header.id = 'study-header';
+      var back = el('a', null, '← Home');
+      back.href = '#';
+      back.addEventListener('click', function (e) {
+        e.preventDefault();
+        showHome();
+      });
+      header.appendChild(back);
+      header.appendChild(el('span', null, titleFor(mode, scope, id)));
+
+      var current = el('div');
+      current.id = 'current';
+
+      var instructions = el('div');
+      instructions.id = 'instructions';
+      instructions.textContent =
+        'Press any key (or tap) to show the name and other info on the back of ' +
+        'the card. When the back is showing, press right arrow (or swipe right) ' +
+        'if you got it right and left arrow (swipe left) if you got it wrong.';
+
+      app.appendChild(header);
+      app.appendChild(current);
+      app.appendChild(instructions);
+
+      var cards = students.map(function (s) {
+        return buildCard(s, { showNumber: false, nameWithFirst: true });
+      });
+
+      var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);
+      teardownStudy = runStudy(state, current);
+      window.scrollTo(0, 0);
+    }
+
+    function renderBanner() {
+      if (!banner) return;
+      banner.innerHTML = '';
+      if (!CTX.isAdmin && !CTX.impersonating) return;
+
+      if (CTX.impersonating) {
+        banner.appendChild(el('span', null, 'Viewing as ' + CTX.effective));
+        if (CTX.baseUrl) {
+          var backLink = el('a', null, 'back to my view');
+          backLink.href = CTX.baseUrl;
+          backLink.target = '_top';
+          banner.appendChild(backLink);
+        }
+      }
+
+      if (CTX.isAdmin && CTX.baseUrl) {
+        var form = document.createElement('form');
+        form.action = CTX.baseUrl;
+        form.method = 'get';
+        form.target = '_top';
+        var label = el('label', null, 'view as ');
+        var input = document.createElement('input');
+        input.name = 'as';
+        input.type = 'email';
+        input.placeholder = 'teacher@berkeley.net';
+        input.required = true;
+        label.appendChild(input);
+        form.appendChild(label);
+        form.appendChild(el('button', null, 'Go'));
+        banner.appendChild(form);
+      }
+    }
+
+    // Initial dispatch: a shared learn/review link lands straight in study mode.
+    if (ROUTE.mode === 'learn' || ROUTE.mode === 'review') {
+      showStudy(ROUTE.mode, ROUTE.scope || 'all', ROUTE.id || '');
+    } else {
+      showHome();
+    }
+  })();
+</script>

@@ -1,0 +1,25 @@
+<script>
+  // Minimal DOM helpers (de-moduled from public/js/dom.js).
+
+  function $(q, content) {
+    var m = q.match(/^<(\w+)>$/);
+    if (m) {
+      var e = document.createElement(m[1]);
+      if (content !== undefined) e.append(content);
+      return e;
+    }
+    return document.querySelector(q);
+  }
+
+  function $$(q) {
+    return document.querySelectorAll(q);
+  }
+
+  // Create an element with an optional class and text content.
+  function el(tag, className, text) {
+    var e = document.createElement(tag);
+    if (className) e.className = className;
+    if (text !== undefined && text !== null) e.textContent = text;
+    return e;
+  }
+</script>

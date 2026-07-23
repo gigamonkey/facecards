@@ -74,12 +74,36 @@ feature needs — v1 resolves an email to *the sections that teacher teaches*; v
 generalizes it to *the sections a viewer is authorized for* (own sections for a
 teacher, assigned sections for a volunteer).
 
-**Edge case — non-teacher `@berkeley.net` viewers.** A staff/admin account (or
-the deployer, if not listed as a teacher in the sheet) matches no
-`teacherEmail`, so scoping yields an empty model — they'd see an empty home
-page. Decide whether that's fine or whether a small `CONFIG.ADMINS` list should
-see all sections. Recommend shipping v1 with the empty-model behavior (simplest;
-the deployer can always inspect data directly) and adding admins only if needed.
+**No-sections viewers.** A `@berkeley.net` account that matches no `teacherEmail`
+(staff, admin, or a teacher not yet in the sheet) scopes to an empty model.
+Instead of an empty home page, render a **simple landing page**:
+
+> You don't have any sections set up. To get access, contact Mr. Seibel
+> &lt;peterseibel@berkeley.net&gt;.
+
+### Admin impersonation
+
+Admins can view the app **as any user** to see exactly what that user would see,
+via a query param — e.g. `…/exec?as=teacher@berkeley.net`.
+
+- **Who's an admin:** `CONFIG.ADMINS` (comma-separated), containing
+  `peterseibel@berkeley.net`.
+- **Resolution in `doGet`:** compute the effective email used for scoping —
+  ```js
+  const actual = (Session.getActiveUser().getEmail() || '').toLowerCase();
+  const isAdmin = CONFIG.ADMINS.split(',').map(s => s.trim().toLowerCase()).includes(actual);
+  const effective = (isAdmin && e.parameter.as) ? e.parameter.as.toLowerCase() : actual;
+  ```
+  Everything downstream (scoping, model, landing page) keys off `effective`.
+- **Security:** the `as` param is honored **only** when `actual` is an admin; a
+  non-admin who passes `?as=` is ignored and sees their own sections. This must
+  be enforced server-side (it is, above — `effective` falls back to `actual`).
+- Impersonating a user with no sections correctly shows *that user's* landing
+  page — that's the point of "see what they'd see."
+- Show a small **"viewing as &lt;email&gt;"** banner when impersonating so the
+  admin knows the view isn't their own. Peter's own account has no sections, so
+  without `?as=` he lands on the no-sections page; that page can carry an admin
+  hint about the `?as=` param.
 
 **Resource sharing:**
 
@@ -172,12 +196,17 @@ photos → render a placeholder / blank card.
 
 Single-page app; no server-side page routing (a web app has one fixed URL).
 
-- **`doGet(e)`** authorizes, builds the data model **scoped to the viewer's own
+- **`doGet(e)`** authorizes, resolves the **effective email** (viewer, or an
+  admin's `?as=` target), builds the data model **scoped to that email's own
   sections** (classes/students + fileIds), and injects it as JSON into the page
   via an `HtmlService.createTemplateFromFile('index')` template
   (`<?= JSON.stringify(model) ?>` into a `<script>` bootstrap variable). One
   page load, no extra round trip. Because the injected model already contains
-  only the viewer's sections, scoping holds even though it's a client-side SPA.
+  only the scoped sections, scoping holds even though it's a client-side SPA.
+- **No-sections landing page** — if the scoped model has no classes, `doGet`
+  returns the "contact Mr. Seibel" landing page instead of the app shell (an
+  admin impersonating a no-sections user sees this too, with the impersonation
+  banner).
 - **Client-side views** toggle without reload:
   - **Home** — the viewer's classes as photo-card grids (port of `index.njk`,
     minus the outer per-teacher loop since it's a single teacher), using
@@ -227,6 +256,8 @@ so each current `public/js/*.js` module becomes a `.html` partial wrapping a
 
 - `SPREADSHEET_ID` — the student spreadsheet.
 - `DRIVE_FOLDER_ID` — the photos folder.
+- `ADMINS` — comma-separated admin emails (at least `peterseibel@berkeley.net`);
+  admins may impersonate via `?as=`.
 
 Accessed in server code as `CONFIG.SPREADSHEET_ID`, etc. `config.js` is pushed
 with the code and lives in git (fine for IDs, not secrets — there are none here).
@@ -247,7 +278,7 @@ the `convert` branch.
    (Run as the `berkeley.net` clasp account.)
 4. **Configure resources:**
    ```bash
-   hug config set SPREADSHEET_ID=<id> DRIVE_FOLDER_ID=<id>
+   hug config set SPREADSHEET_ID=<id> DRIVE_FOLDER_ID=<id> ADMINS=peterseibel@berkeley.net
    ```
 5. **Populate the photos tab:** run `refreshPhotoMap` once (Apps Script editor).
 6. **Deploy:**
@@ -266,9 +297,10 @@ pointed at a test sheet if wanted (per hug's branch-per-environment pattern).
 express/passport/nunjucks/morgan/dotenv, `.dockerignore`. Keep git history for
 reference.
 
-**Add**: `appsscript.json`, `Code.js`, `index.html`, `js-dom.html`,
-`js-random.html`, `js-home.html`, `js-learn.html`, `js-review.html`, `js-app.html`,
-`css.html`, `config.js` (via `hug config`), `.clasp.json` (via `hug init`).
+**Add**: `appsscript.json`, `Code.js`, `index.html`, `landing.html` (no-sections
+page), `js-dom.html`, `js-random.html`, `js-home.html`, `js-learn.html`,
+`js-review.html`, `js-app.html`, `css.html`, `config.js` (via `hug config`),
+`.clasp.json` (via `hug init`).
 
 **Update**: `CLAUDE.md` to describe the Apps Script architecture and hug workflow;
 `.gitignore` for clasp artifacts. `README` optional.
@@ -278,9 +310,11 @@ reference.
 1. Scaffold `appsscript.json` (DOMAIN + USER_DEPLOYING), `Code.js`, `index.html`.
 2. Port the data reduction into `Code.js`; add `readSheet`, model builder.
 3. Add `refreshPhotoMap` + `photos`-tab read + student↔fileId join.
-4. Implement the auth gate (pending volunteer decision).
+4. Implement the auth gate (`@berkeley.net`), effective-email resolution
+   (admin `?as=` impersonation), per-teacher scoping, and the `landing.html`
+   no-sections page.
 5. Convert client modules to `js-*.html` includes; wire `include()`.
-6. Build home view (grid + flip) from injected JSON.
+6. Build home view (grid + flip) from injected JSON; add the impersonation banner.
 7. Build study view; adapt `learn.js`/`review.js` to render from JSON.
 8. Add deep-link bootstrap from `e.parameter`.
 9. `hug init --bare`, `hug config set …`, run `refreshPhotoMap`, `hug deploy`.
@@ -291,10 +325,14 @@ reference.
 - **Auth**: a `@berkeley.net` account gets in; a `@students.berkeley.net` account
   is refused.
 - **Scoping**: a teacher sees only their own sections (home grid, study scopes,
-  and deep links); another teacher's `class` deep link falls back to home; a
-  non-teacher `@berkeley.net` account gets an empty model (or admin behavior, if
-  that option is taken). Confirm other teachers' rows are absent from the
-  injected JSON, not just hidden.
+  and deep links); another teacher's `class` deep link falls back to home.
+  Confirm other teachers' rows are absent from the injected JSON, not just hidden.
+- **No-sections landing**: a `@berkeley.net` account with no sections sees the
+  "contact Mr. Seibel" page, not an empty home or an error.
+- **Impersonation**: an admin with `?as=<teacher>` sees that teacher's sections
+  (and the banner); an admin with `?as=<no-sections user>` sees the landing
+  page; a **non-admin** passing `?as=` is ignored and sees only their own
+  sections (verify server-side, not just UI).
 - **Data**: the viewer's classes/students match the sheet; slugs stable.
 - **Images**: thumbnails render and cache; missing photos degrade gracefully.
 - **Learn**: Fibonacci-row progression and wrong-answer recycling behave as today.

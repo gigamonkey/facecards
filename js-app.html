@@ -151,9 +151,7 @@
       var help = el('button', 'nav-help', '?');
       help.type = 'button';
       help.setAttribute('aria-label', 'How to use the flashcards');
-      help.addEventListener('click', function () {
-        helpOverlay.classList.add('show');
-      });
+      help.addEventListener('click', openHelp);
       banner.appendChild(help);
 
       // Impersonation notice — admins viewing as someone else.
@@ -215,16 +213,19 @@
       });
       box.appendChild(close);
       box.appendChild(el('h2', null, 'How to study'));
-      box.appendChild(
-        el(
-          'p',
-          null,
-          'Tap the card (or press any key) to reveal the name. Then swipe right ' +
-            'if you got it, and swipe left if you missed it.',
-        ),
-      );
+      box.appendChild(el('p', 'help-text', '')); // text set per platform on open
       overlay.appendChild(box);
       return overlay;
+    }
+
+    // Open the help overlay with instructions appropriate to the device.
+    function openHelp() {
+      helpOverlay.querySelector('.help-text').textContent = isMobile()
+        ? 'Tap the card to reveal the name. Then swipe right if you got it, or ' +
+          'swipe left if you missed it.'
+        : 'Press any key to reveal the name. Then press the right arrow key if you ' +
+          'got it, or the left arrow key if you missed it.';
+      helpOverlay.classList.add('show');
     }
 
     // Initial dispatch: a shared learn/review link lands straight in study mode;

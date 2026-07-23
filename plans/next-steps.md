@@ -9,6 +9,14 @@ and the no-sections landing page are all working in production as of
 
 ## Loose ends
 
+- **Remove (or gate) the perf/timing logs.** While diagnosing slow page loads we
+  added `console.log` timing throughout `Code.js`: `doGet`'s per-step timers
+  (`getActiveUser`/`readAdmins`/`getBaseUrl`), the sheet/photo reads
+  (`readStudents`/`readPhotoMap`/`buildData`), `getPhoto`, and the cache
+  hit/skip/`cached big` lines. Perf is now good (~250 ms warm), so strip these —
+  or put them behind a debug flag — so every request isn't logging a handful of
+  lines. Keep the top-level `doGet build` / `page.evaluate` if useful.
+
 - **`refreshPhotoMap` speed.** It iterates the Drive folder file-by-file via
   `DriveApp`; ~3,000 files runs in ~1–3 min, under the 6-minute cap. If a future
   refresh times out (`Exceeded maximum execution time`), switch to the Drive

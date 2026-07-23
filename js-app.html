@@ -32,6 +32,30 @@
       window.scrollTo(0, 0);
     }
 
+    // The default landing view: two boxes linking to the grids (?learn) and the
+    // shared overview (?shared).
+    function showMenu() {
+      clearStudy();
+      setView('menu');
+      app.innerHTML = '';
+      var menu = el('div');
+      menu.id = 'menu';
+      menu.appendChild(el('h1', null, MODEL.teacherLast || 'Facecards'));
+      var boxes = el('div', 'menu-boxes');
+      boxes.appendChild(menuBox('Learn students’ names', '?learn'));
+      boxes.appendChild(menuBox('See shared students', '?shared'));
+      menu.appendChild(boxes);
+      app.appendChild(menu);
+      window.scrollTo(0, 0);
+    }
+
+    function menuBox(label, query) {
+      var box = el('a', 'menu-box', label);
+      box.href = (CTX.baseUrl || '') + query;
+      if (CTX.baseUrl) box.target = '_top';
+      return box;
+    }
+
     function studentsFor(scope, id) {
       if (scope === 'class' && MODEL.classes[id]) {
         return MODEL.classes[id].students.slice();
@@ -65,7 +89,7 @@
 
       var header = el('div');
       header.id = 'study-header';
-      var back = el('a', null, '← Home');
+      var back = el('a', null, '← Back');
       back.href = '#';
       back.addEventListener('click', function (e) {
         e.preventDefault();
@@ -151,8 +175,10 @@
       window.scrollTo(0, 0);
     } else if (ROUTE.mode === 'learn' || ROUTE.mode === 'review') {
       showStudy(ROUTE.mode, ROUTE.scope || 'all', ROUTE.id || '');
-    } else {
+    } else if (ROUTE.mode === 'grid') {
       showHome();
+    } else {
+      showMenu();
     }
   })();
 </script>

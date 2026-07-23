@@ -16,7 +16,10 @@ live; unchecked items are planned.
 
 ## Home and navigation
 
-- [x] Home page shows the teacher's classes as grids of student photo cards
+- [x] Home page is a menu with two choices: "Learn students' names" (the class
+      face grids, at `?learn`) and "See shared students" (`?shared`)
+
+- [x] `?learn` shows the teacher's classes as grids of student photo cards
 
 - [x] Classes are grouped by room + period (per teacher); the class name
       concatenates the distinct course names sharing that slot

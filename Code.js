@@ -76,8 +76,16 @@ function doGet(e) {
     return page(landing);
   }
 
+  var mode;
+  if (params.mode === 'learn' || params.mode === 'review') {
+    mode = params.mode; // study deep link
+  } else if (params.learn !== undefined) {
+    mode = 'grid'; // ?learn -> the class face grids
+  } else {
+    mode = 'menu'; // default -> two-box menu
+  }
   var route = {
-    mode: params.mode || 'home', // home | learn | review
+    mode: mode,
     scope: params.scope || '', // '' | class | all
     id: params.id || '', // class slug
   };

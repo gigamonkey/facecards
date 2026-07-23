@@ -8,6 +8,12 @@
     var home = el('div');
     home.id = 'home';
 
+    var baseUrl = (window.CTX && window.CTX.baseUrl) || '';
+    var back = el('a', 'home-link', '← Home');
+    back.href = baseUrl || '#';
+    if (baseUrl) back.target = '_top';
+    home.appendChild(back);
+
     var h1 = el('h1', null, model.teacherLast || 'My students');
     var allButtons = el('span', 'buttons');
     allButtons.appendChild(

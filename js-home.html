@@ -63,18 +63,19 @@
     return a;
   }
 
-  // Flip a card between photo and info on click (port of public/js/index.js).
+  // Flip a card between its front (photo or initials box) and info on click
+  // (port of public/js/index.js).
   function attachFlip(card) {
     card.dataset.showing = 'front';
-    var img = card.querySelector('img');
+    var front = card.querySelector('img') || card.querySelector('.initials');
     var back = card.querySelector('.back');
     card.onclick = function () {
       if (card.dataset.showing === 'front') {
-        img.style.display = 'none';
+        front.style.display = 'none';
         back.style.display = 'flex';
         card.dataset.showing = 'back';
       } else {
-        img.style.display = 'block';
+        front.style.display = ''; // revert to the CSS default (block img / flex initials)
         back.style.display = 'none';
         card.dataset.showing = 'front';
       }

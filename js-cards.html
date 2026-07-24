@@ -207,7 +207,11 @@
 
   // Warm photos in the background so cards are usually ready before they're
   // reached: browser HTTP cache when direct loads work (the grid often did this
-  // already), otherwise the proxy cache, one server request at a time.
+  // already), otherwise the proxy cache. The proxy path keeps a few getPhoto
+  // requests in flight at once (POOL) — faster than serial, still bounded so it
+  // doesn't overrun Apps Script's simultaneous-execution limit.
+  var PRELOAD_POOL = 4;
+
   function preloadPhotos(fileIds) {
     whenDirectKnown(function (ok) {
       if (ok) {
@@ -218,21 +222,23 @@
       }
       if (!hasServer()) return;
       var i = 0;
-      function next() {
+      // Start the next unwarmed photo, then chain the following one from its
+      // completion. Primed POOL times below, this keeps ~POOL requests in flight.
+      function pump() {
         while (i < fileIds.length && (!fileIds[i] || PHOTO_CACHE[fileIds[i]])) i++;
         if (i >= fileIds.length) return;
         var fileId = fileIds[i++];
         google.script.run
           .withSuccessHandler(function (dataUrl) {
             if (dataUrl) PHOTO_CACHE[fileId] = dataUrl;
-            next();
+            pump();
           })
           .withFailureHandler(function () {
-            next();
+            pump();
           })
           .getPhoto(fileId);
       }
-      next();
+      for (var n = 0; n < PRELOAD_POOL; n++) pump();
     });
   }
 

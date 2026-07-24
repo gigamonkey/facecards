@@ -202,22 +202,59 @@
         proxyLoad(fileId, swap);
       };
       img.src = thumbUrl(fileId, 400);
+      // Warmed already → resolve synchronously, no "Loading…" flash.
+      if (img.complete && img.naturalWidth) {
+        img.onload = null;
+        swap(img);
+      }
     });
   }
 
+  // Direct-loaded thumbnails, kept referenced for the whole session. Retaining
+  // the Image objects does two things a fire-and-forget `new Image().src` can't:
+  // it stops the browser from garbage-collecting (and so cancelling) a preload
+  // whose request is still queued, and it keeps the decoded photo in the memory
+  // cache so a first view deep into the session paints instantly instead of
+  // re-fetching a Drive thumbnail whose HTTP-cache entry didn't survive. Keyed
+  // by fileId. Thumbnails are small (w400) and rosters bounded, so holding them
+  // is cheap.
+  var DIRECT_WARM = {};
+
+  // Warm the browser cache for direct loads, at most POOL requests in flight so
+  // a big roster doesn't fire hundreds of Drive requests at once.
+  function warmDirect(fileIds, pool) {
+    var i = 0;
+    var active = 0;
+    function pump() {
+      while (active < pool && i < fileIds.length) {
+        var fileId = fileIds[i++];
+        if (!fileId || DIRECT_WARM[fileId]) continue;
+        active++;
+        var img = new Image();
+        DIRECT_WARM[fileId] = img; // retain for the session
+        img.onload = img.onerror = function () {
+          active--;
+          pump();
+        };
+        img.src = thumbUrl(fileId, 400);
+      }
+    }
+    pump();
+  }
+
   // Warm photos in the background so cards are usually ready before they're
-  // reached: browser HTTP cache when direct loads work (the grid often did this
-  // already), otherwise the proxy cache. The proxy path keeps a few getPhoto
-  // requests in flight at once (POOL) — faster than serial, still bounded so it
-  // doesn't overrun Apps Script's simultaneous-execution limit.
+  // reached: browser cache when direct loads work (the grid often did this
+  // already), otherwise the proxy cache. Both paths keep a few requests in
+  // flight at once (POOL) — faster than serial, still bounded (the proxy path so
+  // it doesn't overrun Apps Script's simultaneous-execution limit; the direct
+  // path so it doesn't burst hundreds of Drive requests).
   var PRELOAD_POOL = 4;
+  var DIRECT_POOL = 6; // browsers cap ~6 connections per host anyway
 
   function preloadPhotos(fileIds) {
     whenDirectKnown(function (ok) {
       if (ok) {
-        fileIds.forEach(function (fileId) {
-          if (fileId) new Image().src = thumbUrl(fileId, 400);
-        });
+        warmDirect(fileIds, DIRECT_POOL);
         return;
       }
       if (!hasServer()) return;

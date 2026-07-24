@@ -72,9 +72,100 @@
     return typeof google !== 'undefined' && google.script && google.script.run;
   }
 
-  // When a deferred card is shown, replace its "Loading…" box with the photo,
-  // fetched via google.script.run so it works where the browser blocks
-  // cross-site Drive cookies (e.g. Safari on mobile). Cached by fileId.
+  // --- Direct-vs-proxied photo detection -----------------------------------
+  //
+  // Direct Drive thumbnail loads work on desktop but are blocked where the
+  // browser won't send Google's cookie to drive.google.com (notably Safari on
+  // mobile, which strips third-party cookies), so a domain-restricted photo
+  // 403s and the <img> fires `error`. We probe once with a real thumbnail: if
+  // it loads, study/shared cards reuse the same direct URLs the grid already
+  // cached (so they appear instantly); if it errors, they fall back to fetching
+  // photos through the server (getPhoto), which always works.
+  var DIRECT_OK = null; // null until the probe resolves
+  var directWaiters = [];
+  var directProbed = false;
+
+  function settleDirect(ok) {
+    DIRECT_OK = ok;
+    var waiters = directWaiters;
+    directWaiters = [];
+    waiters.forEach(function (cb) {
+      cb(ok);
+    });
+  }
+
+  // Run cb(DIRECT_OK) once known — immediately if the probe already resolved.
+  function whenDirectKnown(cb) {
+    if (DIRECT_OK !== null) cb(DIRECT_OK);
+    else directWaiters.push(cb);
+  }
+
+  // The first real photo in the injected model, to probe with.
+  function anyFileId() {
+    var m = window.MODEL;
+    if (m && m.classes) {
+      var slugs = Object.keys(m.classes);
+      for (var i = 0; i < slugs.length; i++) {
+        var studs = m.classes[slugs[i]].students || [];
+        for (var j = 0; j < studs.length; j++) {
+          if (studs[j].fileId) return studs[j].fileId;
+        }
+      }
+    }
+    var sh = window.SHARED;
+    if (sh && sh.students) {
+      for (var k = 0; k < sh.students.length; k++) {
+        if (sh.students[k].fileId) return sh.students[k].fileId;
+      }
+    }
+    return null;
+  }
+
+  // Kick off the probe once (idempotent). Uses the same URL/size the grid uses
+  // so on the grid path it's a cache hit and resolves instantly.
+  function startDirectProbe() {
+    if (directProbed) return;
+    directProbed = true;
+    var fileId = anyFileId();
+    if (!fileId) {
+      settleDirect(false); // no photos → nothing to reuse, don't leave waiters hung
+      return;
+    }
+    var probe = new Image();
+    probe.onload = function () {
+      settleDirect(true);
+    };
+    probe.onerror = function () {
+      settleDirect(false);
+    };
+    probe.src = thumbUrl(fileId, 400);
+  }
+
+  // Fetch a photo through the server as a data URL and hand it to swap(). Cached
+  // by fileId so card repeats (Leitner, review re-runs) don't refetch.
+  function proxyLoad(fileId, swap) {
+    if (PHOTO_CACHE[fileId]) {
+      var cached = el('img');
+      cached.src = PHOTO_CACHE[fileId];
+      swap(cached);
+      return;
+    }
+    if (!hasServer()) return;
+    google.script.run
+      .withSuccessHandler(function (dataUrl) {
+        if (!dataUrl) return;
+        PHOTO_CACHE[fileId] = dataUrl;
+        var img = el('img');
+        img.src = dataUrl;
+        swap(img);
+      })
+      .getPhoto(fileId);
+  }
+
+  // When a deferred card is shown, replace its "Loading…" box with the photo.
+  // Where direct Drive loads work, use the same URL the grid cached (instant),
+  // falling back to the proxy if that particular image fails; otherwise proxy
+  // straight away.
   function loadCardImage(card) {
     if (!card) return;
     var box = card.querySelector('.loading');
@@ -82,45 +173,68 @@
     var fileId = box.dataset.fileid;
     delete box.dataset.fileid;
 
-    function swap(dataUrl) {
-      if (!dataUrl || !box.parentNode) return;
-      var img = el('img');
-      img.src = dataUrl;
-      box.parentNode.replaceChild(img, box);
+    function swap(node) {
+      if (!node || !box.parentNode) return;
+      box.parentNode.replaceChild(node, box);
     }
 
+    // Already have a proxied copy from a previous show/preload.
     if (PHOTO_CACHE[fileId]) {
-      swap(PHOTO_CACHE[fileId]);
+      proxyLoad(fileId, swap);
       return;
     }
-    if (!hasServer()) return;
-    google.script.run
-      .withSuccessHandler(function (dataUrl) {
-        if (dataUrl) PHOTO_CACHE[fileId] = dataUrl;
-        swap(dataUrl);
-      })
-      .getPhoto(fileId);
+
+    whenDirectKnown(function (ok) {
+      if (!box.parentNode) return; // card left the DOM before the probe resolved
+      if (!ok) {
+        proxyLoad(fileId, swap);
+        return;
+      }
+      // Keep the "Loading…" box until the direct image is ready so a failure
+      // (probe passed but this file didn't) falls back cleanly to the proxy.
+      var img = el('img');
+      img.onload = function () {
+        img.onload = null;
+        swap(img);
+      };
+      img.onerror = function () {
+        img.onerror = null;
+        proxyLoad(fileId, swap);
+      };
+      img.src = thumbUrl(fileId, 400);
+    });
   }
 
-  // Warm the cache in the background, one request at a time, so cards are
-  // usually ready before they're reached.
+  // Warm photos in the background so cards are usually ready before they're
+  // reached: browser HTTP cache when direct loads work (the grid often did this
+  // already), otherwise the proxy cache, one server request at a time.
   function preloadPhotos(fileIds) {
-    if (!hasServer()) return;
-    var i = 0;
-    function next() {
-      while (i < fileIds.length && (!fileIds[i] || PHOTO_CACHE[fileIds[i]])) i++;
-      if (i >= fileIds.length) return;
-      var fileId = fileIds[i++];
-      google.script.run
-        .withSuccessHandler(function (dataUrl) {
-          if (dataUrl) PHOTO_CACHE[fileId] = dataUrl;
-          next();
-        })
-        .withFailureHandler(function () {
-          next();
-        })
-        .getPhoto(fileId);
-    }
-    next();
+    whenDirectKnown(function (ok) {
+      if (ok) {
+        fileIds.forEach(function (fileId) {
+          if (fileId) new Image().src = thumbUrl(fileId, 400);
+        });
+        return;
+      }
+      if (!hasServer()) return;
+      var i = 0;
+      function next() {
+        while (i < fileIds.length && (!fileIds[i] || PHOTO_CACHE[fileIds[i]])) i++;
+        if (i >= fileIds.length) return;
+        var fileId = fileIds[i++];
+        google.script.run
+          .withSuccessHandler(function (dataUrl) {
+            if (dataUrl) PHOTO_CACHE[fileId] = dataUrl;
+            next();
+          })
+          .withFailureHandler(function () {
+            next();
+          })
+          .getPhoto(fileId);
+      }
+      next();
+    });
   }
+
+  startDirectProbe();
 </script>

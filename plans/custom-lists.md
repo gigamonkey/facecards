@@ -1,5 +1,11 @@
 # Custom student lists
 
+**Admin-only** (decision 5 below): a list can name any student in the roster,
+which regular teachers shouldn't be able to browse at will. The gate is "the
+effective email is in the `admins` tab" on both the read side (`model.lists`
+is omitted for non-admins, hiding the whole client section) and the write
+endpoints.
+
 Let a teacher upload a plain-text list of student numbers (one per line) and
 save it as a named custom list they can then study (Learn / Review / Browse)
 like a class. The list may include any student in the roster, not just the
@@ -157,3 +163,6 @@ goal — list-making happens at a desk.
    report the skipped lines.
 4. **Per-teacher only** — no admin view of all lists; `?as=` impersonation
    covers admin needs.
+5. **Admin-only** (added after implementation): since a list can include any
+   student in the roster, the feature is gated to emails in the `admins` tab —
+   non-admins get no lists section at all, and the endpoints refuse them.

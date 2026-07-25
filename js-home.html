@@ -39,9 +39,12 @@
 
   // The custom-lists section of the home view: each saved list as a face grid
   // with the same Learn/Review/Browse buttons as a class (plus Delete), then
-  // the form for uploading or pasting a new list.
+  // the form for uploading or pasting a new list. Admin-only — the server
+  // sends model.lists (possibly empty) only for admin viewers, so its absence
+  // hides the whole section, form included.
   function renderLists(home, model, onStudy) {
-    var lists = model.lists || {};
+    var lists = model.lists;
+    if (!lists) return;
 
     Object.keys(lists)
       .sort(function (a, b) {

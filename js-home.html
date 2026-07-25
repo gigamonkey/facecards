@@ -100,10 +100,13 @@
     info.appendChild(
       el('p', 'name', s.nickname ? s.nickname + ' (' + s.firstName + ')' : s.firstName),
     );
-    info.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
-    info.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
-    info.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
-    info.appendChild(el('p', null, String(s.studentNumber)));
+    info.appendChild(
+      el(
+        'p',
+        null,
+        (s.firstName || '') + ' ' + (s.lastName || '') + ' — ' + (s.grade || '') + ' / ' + (s.gender || ''),
+      ),
+    );
     card.appendChild(info);
 
     // The student's full schedule: period, class, teacher. (Guarded — a model

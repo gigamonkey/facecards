@@ -149,7 +149,7 @@
       // full-page reload.
       var nav = el('div', 'nav-links');
       nav.appendChild(navLink('Home', appUrl('')));
-      nav.appendChild(navLink('Learn', appUrl('?learn')));
+      nav.appendChild(navLink('Mine', appUrl('?learn')));
       nav.appendChild(navLink('Shared', appUrl('?shared')));
       banner.appendChild(nav);
 
@@ -217,21 +217,39 @@
         overlay.classList.remove('show');
       });
       box.appendChild(close);
-      box.appendChild(el('h2', null, 'How to study'));
-      box.appendChild(el('p', 'help-text', '')); // text set per platform on open
+      box.appendChild(el('h2', null, 'How to use Facecards'));
+      box.appendChild(el('div', 'help-body')); // filled per platform on open
       overlay.appendChild(box);
       return overlay;
     }
 
-    // Open the help overlay with instructions appropriate to the device.
+    // Fill and open the help overlay, with instructions appropriate to the
+    // device. Static markup only, so innerHTML is fine.
     function openHelp() {
-      helpOverlay.querySelector('.help-text').textContent = (
-        isMobile()
-          ? 'Tap the card to reveal the name. Then swipe right if you got it, or ' +
+      var mobile = isMobile();
+      var reveal = mobile
+        ? 'Tap the card to reveal the name. Then swipe right if you got it, or ' +
           'swipe left if you missed it.'
-          : 'Press any key to reveal the name. Then press the right arrow key if you ' +
-          'got it, or the left arrow key if you missed it.'
-      ) + ' Students with no picture available show as their initials.';
+        : 'Press any key to reveal the name. Then press the right arrow key if you ' +
+          'got it, or the left arrow key if you missed it.';
+      helpOverlay.querySelector('.help-body').innerHTML =
+        '<p><strong>Mine</strong> is for learning and browsing your own students; ' +
+        '<strong>Shared</strong> shows you the students you share with each of the ' +
+        'other teachers.</p>' +
+        '<h3>Learn and Review</h3>' +
+        '<p>' +
+        reveal +
+        ' Students with no picture available show as their initials.</p>' +
+        '<p><strong>Learn</strong> uses spaced repetition: cards you miss come back ' +
+        'right away, while cards you get come back less and less often until you’ve ' +
+        'learned everyone. <strong>Review</strong> is a more efficient way to check ' +
+        'that you still remember everyone — a single pass through the whole group, ' +
+        'with anyone you missed coming back at the end.</p>' +
+        '<h3>Browse</h3>' +
+        '<p><strong>Browse</strong> just shows the students one at a time — picture, ' +
+        'name, and schedule — ' +
+        (mobile ? 'swipe left and right' : 'use the arrow keys') +
+        ' to move between them.</p>';
       helpOverlay.classList.add('show');
     }
 

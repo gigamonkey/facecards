@@ -508,14 +508,11 @@
     }
     body.view-home .buttons {
       display: flex;
-      flex-wrap: wrap;
       gap: 0.5em;
       margin-bottom: 0.3em;
     }
     body.view-home .buttons a {
-      /* Learn / Review take half the width each; Browse wraps to its own
-         full-width row below them. */
-      flex: 1 1 40%;
+      flex: 1; /* Learn / Review / Browse each take a third of the width */
       text-align: center;
       padding: 0.7em 0;
       font-size: clamp(16px, 4.5vmin, 22px);

@@ -161,7 +161,7 @@
 
       // Impersonation notice — admins viewing as someone else.
       if (CTX.impersonating) {
-        banner.appendChild(el('span', 'nav-note', 'as ' + CTX.effective));
+        banner.appendChild(el('span', 'nav-note', 'as ' + CTX.effective.replace(/@berkeley\.net$/, '')));
         if (base) {
           var backLink = el('a', null, 'back to me');
           backLink.href = base;

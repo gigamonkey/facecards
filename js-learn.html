@@ -27,7 +27,11 @@
   var LEARN_START_S = 1; // stability of a new or just-missed card
   var LEARN_GROWTH = 3; // stability multiplier is 1 + this * (1 - R)
   var LEARN_GRADUATED_S = 16; // stability at which a card leaves the session
-  var LEARN_INTRODUCE_BELOW = 0.5; // deal a new card when max urgency is below this
+  // Deal a new card only when nothing in play is as urgent as a just-missed
+  // card is one trial after the miss. Defined that way (rather than as a bare
+  // number) so a fresh miss always blocks new material: the very next card is
+  // existing material, and the missed card follows close behind.
+  var LEARN_INTRODUCE_BELOW = 1 - Math.pow(2, -1 / LEARN_START_S);
 
   function LearnState(cards) {
     this.unseen = shuffled(cards);
@@ -90,9 +94,13 @@
   LearnState.prototype.next = function () {
     if (this.remaining === 0) return null;
 
+    // The gate counts every active card, including the one just answered: a
+    // just-missed card is urgent even though it can't be re-dealt yet, so it
+    // holds new material back while the sampler fills the gap with an
+    // existing card.
     var self = this;
     var maxW = this.active.reduce(function (max, c) {
-      return c === self.lastCard ? max : Math.max(max, self.urgency(c));
+      return Math.max(max, self.urgency(c));
     }, 0);
 
     // Nothing in play is urgent enough: bring in a new card, or once the
@@ -103,8 +111,13 @@
       if (spacer) return this.deal(spacer);
     }
 
-    // Re-deal the card just answered only if it's all that's left.
-    return this.deal(this.sample(this.active) || this.lastCard);
+    // Re-ask an active card (never the one just answered). When the card
+    // just answered is the only active card, fall back to anything else in
+    // play -- a graduated spacer or a new card -- before re-dealing it
+    // back-to-back.
+    var pick = this.sample(this.active) || this.sample(this.graduated);
+    if (!pick && this.unseen.length > 0) pick = this.unseen.pop();
+    return this.deal(pick || this.lastCard);
   };
 
   LearnState.prototype.correct = function (card) {

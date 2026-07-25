@@ -17,11 +17,12 @@
   // New cards are dealt in only when no already-seen card is urgent enough
   // -- which also means that when every active card is still fresh, the pool
   // grows instead of re-asking too early, and gaps stretch on their own. A
-  // card graduates out of the session once s reaches GRADUATED_S -- or, late
-  // in the session, a lower bar: with only a few cards left in play the
-  // session can't produce long gaps, so it stops demanding retention it has
-  // no way to test (this is what keeps the last card from being drilled
-  // back-to-back forever). The session ends when every card has graduated.
+  // card graduates out of the session once s reaches the graduation bar
+  // (GRADUATED_S, capped only for tiny decks that can't produce gaps that
+  // long). Once the deck is exhausted, the same not-urgent-enough gate deals
+  // already-graduated cards back in as spacers, so the last stragglers still
+  // get real gaps instead of being drilled back-to-back -- and missing a
+  // spacer un-graduates it. The session ends when every card has graduated.
 
   var LEARN_START_S = 1; // stability of a new or just-missed card
   var LEARN_GROWTH = 3; // stability multiplier is 1 + this * (1 - R)
@@ -31,11 +32,17 @@
   function LearnState(cards) {
     this.unseen = shuffled(cards);
     this.active = []; // seen but not yet graduated
+    this.graduated = [];
     this.remaining = cards.length; // active + unseen
     this.trial = 0;
     this.lastCard = null;
     this.misses = 0;
     this.memory = new Map(); // card -> { s, askedAt, askedW }
+    // A deck can't produce gaps longer than the number of other cards in it.
+    this.graduationBar = Math.min(
+      LEARN_GRADUATED_S,
+      Math.max(2 * LEARN_START_S, 2 * (cards.length - 1)),
+    );
   }
 
   LearnState.prototype.urgency = function (card) {
@@ -59,51 +66,54 @@
     return card;
   };
 
-  LearnState.prototype.next = function () {
-    if (this.remaining === 0) return null;
-
-    // Never re-deal the card just answered unless it's all that's left.
+  // Draw from cards (excluding the card just answered) with probability
+  // proportional to urgency; null if there's nothing to draw.
+  LearnState.prototype.sample = function (cards) {
     var self = this;
-    var candidates = this.active.filter(function (c) {
+    var candidates = cards.filter(function (c) {
       return c !== self.lastCard;
     });
-
     var total = 0;
-    var maxW = 0;
     var weights = candidates.map(function (c) {
       var w = self.urgency(c);
       total += w;
-      if (w > maxW) maxW = w;
       return w;
     });
-
-    if (this.unseen.length > 0 && maxW < LEARN_INTRODUCE_BELOW) {
-      return this.deal(this.unseen.pop());
-    }
-    if (candidates.length === 0) {
-      return this.deal(this.lastCard);
-    }
-
     var r = Math.random() * total;
     for (var i = 0; i < candidates.length; i++) {
       r -= weights[i];
-      if (r < 0) return this.deal(candidates[i]);
+      if (r < 0) return candidates[i];
     }
-    return this.deal(candidates[candidates.length - 1]);
+    return candidates.length > 0 ? candidates[candidates.length - 1] : null;
+  };
+
+  LearnState.prototype.next = function () {
+    if (this.remaining === 0) return null;
+
+    var self = this;
+    var maxW = this.active.reduce(function (max, c) {
+      return c === self.lastCard ? max : Math.max(max, self.urgency(c));
+    }, 0);
+
+    // Nothing in play is urgent enough: bring in a new card, or once the
+    // deck is empty, a graduated card as a spacer.
+    if (maxW < LEARN_INTRODUCE_BELOW) {
+      if (this.unseen.length > 0) return this.deal(this.unseen.pop());
+      var spacer = this.sample(this.graduated);
+      if (spacer) return this.deal(spacer);
+    }
+
+    // Re-deal the card just answered only if it's all that's left.
+    return this.deal(this.sample(this.active) || this.lastCard);
   };
 
   LearnState.prototype.correct = function (card) {
     var m = this.memory.get(card);
     m.s *= 1 + LEARN_GROWTH * m.askedW;
-    // Achievable gaps are bounded by the number of other cards still in
-    // play, so the graduation bar tapers with them (but never below one
-    // survived doubling).
-    var bar = Math.min(
-      LEARN_GRADUATED_S,
-      Math.max(2 * LEARN_START_S, 2 * (this.remaining - 1)),
-    );
-    if (m.s >= bar) {
-      this.active.splice(this.active.indexOf(card), 1);
+    var i = this.active.indexOf(card);
+    if (i !== -1 && m.s >= this.graduationBar) {
+      this.active.splice(i, 1);
+      this.graduated.push(card);
       this.remaining--;
     }
   };
@@ -111,6 +121,13 @@
   LearnState.prototype.incorrect = function (card) {
     this.memory.get(card).s = LEARN_START_S;
     this.misses++;
+    // A missed spacer wasn't learned after all: un-graduate it.
+    var i = this.graduated.indexOf(card);
+    if (i !== -1) {
+      this.graduated.splice(i, 1);
+      this.active.push(card);
+      this.remaining++;
+    }
   };
 
   LearnState.prototype.doneMessage = function () {

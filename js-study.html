@@ -18,7 +18,7 @@
     }
 
     function handle(direction) {
-      if (!current) return;
+      if (!current || helpOpen()) return;
       var back = current.querySelector('.back');
       if (getComputedStyle(back).display === 'none') {
         back.style.display = 'block';
@@ -44,6 +44,10 @@
       e.preventDefault(); // suppress scrolling while studying
     }
     function onKeyDown(e) {
+      // The help overlay's own Escape handler runs first (registered earlier),
+      // so by the time this fires helpOpen() is already false — don't let the
+      // keypress that closed the overlay also reveal the card.
+      if (e.key === 'Escape') return;
       var dir = e.code === 'ArrowLeft' ? 'left' : e.code === 'ArrowRight' ? 'right' : 'none';
       handle(dir);
     }

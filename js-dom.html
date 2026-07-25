@@ -23,6 +23,13 @@
     return e;
   }
 
+  // True while the help overlay is open. The study/carousel input drivers
+  // listen at the document level, so without this guard a tap or key aimed at
+  // the overlay would also drive the cards behind it.
+  function helpOpen() {
+    return !!document.querySelector('.help-overlay.show');
+  }
+
   // Build a full-page app URL from a query string ('' | '?learn' | ...),
   // preserving admin impersonation (?as=) across the reload.
   function appUrl(query) {

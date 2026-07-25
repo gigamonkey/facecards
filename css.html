@@ -180,6 +180,44 @@
     cursor: pointer;
   }
 
+  /* ---- Custom-list upload form (bottom of the home view) ---- */
+  .add-list {
+    margin-top: 3em;
+    max-width: 26em;
+  }
+  .add-list .hint {
+    margin: 0.3em 0 0.8em;
+    font-size: 0.95em;
+    color: #445;
+  }
+  .add-list form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    align-items: flex-start;
+  }
+  .add-list input[type='text'],
+  .add-list textarea {
+    font: inherit;
+    padding: 4px 6px;
+    width: 100%;
+  }
+  .add-list textarea {
+    height: 7em;
+  }
+  .add-list button {
+    font: inherit;
+    padding: 4px 12px;
+    border: 1px solid grey;
+    border-radius: 6px;
+    background: #ddf;
+    cursor: pointer;
+  }
+  .list-status {
+    margin-top: 0.5em;
+    color: #a00;
+  }
+
   /* ---- Study view ---- */
   body.view-study {
     display: flex;

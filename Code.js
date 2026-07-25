@@ -24,6 +24,7 @@ var ROSTERS_SHEET = 'rosters';
 var PHOTOS_SHEET = 'photos';
 var ADMINS_SHEET = 'admins';
 var MISSING_PHOTOS_SHEET = 'missing photos';
+var LISTS_SHEET = 'lists';
 
 function doGet(e) {
   e = e || {};
@@ -32,30 +33,24 @@ function doGet(e) {
   console.log('doGet params: ' + JSON.stringify(params));
 
   var tStep = new Date().getTime();
-  var actual = normalizeEmail(Session.getActiveUser().getEmail());
-  logTime('  getActiveUser', tStep);
+  var viewer = resolveViewer(params.as);
+  logTime('  resolveViewer', tStep);
 
-  if (!isBerkeleyStaff(actual)) {
+  if (!viewer) {
     return HtmlService.createHtmlOutput(
       '<p style="font-family:system-ui,sans-serif;margin:2rem">Not authorized.</p>'
     ).setTitle('Facecards');
   }
-
-  tStep = new Date().getTime();
-  var isAdmin = readAdmins().has(actual);
-  logTime('  readAdmins', tStep);
-  var asParam = isAdmin && params.as ? qualifyEmail(params.as) : '';
-  var effective = asParam || actual;
-  var impersonating = effective !== actual;
+  var effective = viewer.effective;
 
   tStep = new Date().getTime();
   var baseUrl = getBaseUrl();
   logTime('  getBaseUrl', tStep);
   var ctx = {
-    actual: actual,
-    effective: effective,
-    impersonating: impersonating,
-    isAdmin: isAdmin,
+    actual: viewer.actual,
+    effective: viewer.effective,
+    impersonating: viewer.impersonating,
+    isAdmin: viewer.isAdmin,
     baseUrl: baseUrl,
   };
 
@@ -84,8 +79,9 @@ function doGet(e) {
 
   var model = buildModel(effective);
 
-  // No sections for this viewer -> landing page.
-  if (Object.keys(model.classes).length === 0) {
+  // Nothing to show this viewer (no sections and no custom lists) -> landing
+  // page. (The lists guard: a model cached before lists existed lacks the key.)
+  if (Object.keys(model.classes).length === 0 && Object.keys(model.lists || {}).length === 0) {
     var landing = HtmlService.createTemplateFromFile('landing');
     landing.ctx = ctx;
     logTime('doGet landing build', t0);
@@ -134,28 +130,55 @@ function buildModel(email) {
 function buildModelUncached(email) {
   var data = getData();
   var teacher = data.teachers[username(email)];
-  if (!teacher) return { teacherLast: '', classes: {} };
 
   var classes = {};
-  Object.keys(teacher.periods).forEach(function (period) {
-    var sec = teacher.periods[period];
-    var slug = slugify(username(email) + '-p' + period);
-    var name = sectionName(sec, period);
-    classes[slug] = {
-      slug: slug,
-      name: name,
-      period: period,
-      teacherLast: teacher.last,
-      students: sec.students.map(function (num) {
-        var o = studentBase(data, num);
-        o.course = name;
-        o.period = period;
-        o.schedule = scheduleFor(data, num); // full schedule, for browse mode
-        return o;
-      }),
-    };
+  if (teacher) {
+    Object.keys(teacher.periods).forEach(function (period) {
+      var sec = teacher.periods[period];
+      var slug = slugify(username(email) + '-p' + period);
+      var name = sectionName(sec, period);
+      classes[slug] = {
+        slug: slug,
+        name: name,
+        period: period,
+        teacherLast: teacher.last,
+        students: sec.students.map(function (num) {
+          var o = studentBase(data, num);
+          o.course = name;
+          o.period = period;
+          o.schedule = scheduleFor(data, num); // full schedule, for browse mode
+          return o;
+        }),
+      };
+    });
+  }
+  return {
+    teacherLast: teacher ? teacher.last : '',
+    classes: classes,
+    lists: listsFor(data, email),
+  };
+}
+
+/**
+ * The viewer's custom lists from the `lists` tab, keyed by slug (the 'list-'
+ * prefix keeps them clear of the class slugs, which start with a username). A
+ * list may include any student in the roster, not just the viewer's own;
+ * numbers no longer in the roster are dropped (nothing to show for them).
+ */
+function listsFor(data, email) {
+  var target = qualifyEmail(email);
+  var lists = {};
+  readLists().forEach(function (r) {
+    var name = String(r.listName || '').trim();
+    var num = String(r.studentNumber || '').trim();
+    if (qualifyEmail(r.teacherEmail) !== target || !name || !data.students[num]) return;
+    var slug = 'list-' + slugify(name);
+    if (!lists[slug]) lists[slug] = { slug: slug, name: name, students: [] };
+    var o = studentBase(data, num);
+    o.schedule = scheduleFor(data, num); // full schedule, for browse mode
+    lists[slug].students.push(o);
   });
-  return { teacherLast: teacher.last, classes: classes };
+  return lists;
 }
 
 function buildSharedModel(currentEmail, param) {
@@ -494,6 +517,102 @@ function getPhoto(fileId) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Custom lists                                                        */
+/*                                                                     */
+/* Teachers upload (or paste) a plain-text list of student numbers,    */
+/* one per line, stored in the `lists` tab as one row per              */
+/* (teacherEmail, listName, studentNumber) and served back as          */
+/* model.lists, studied like a class. Saving replaces any same-named   */
+/* list.                                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Save (or replace) a custom list for the calling teacher. `text` is the
+ * uploaded file or pasted numbers, one student number per line. Lines that
+ * aren't in the roster (or aren't numbers at all) are skipped and reported
+ * back so the client can warn about them. Called via google.script.run; `as`
+ * is the client's ?as= param so an admin's edits land under the impersonated
+ * teacher (resolveViewer re-checks admin-ness — a non-admin's `as` is ignored).
+ */
+function saveList(name, text, as) {
+  var viewer = resolveViewer(as);
+  if (!viewer) throw new Error('Not authorized.');
+  var listName = String(name || '').trim();
+  if (!listName) throw new Error('The list needs a name.');
+
+  var lines = String(text || '')
+    .split(/\r?\n/)
+    .map(function (s) {
+      return s.trim();
+    })
+    .filter(function (s) {
+      return s !== '';
+    });
+
+  var data = getData();
+  var seen = {};
+  var nums = [];
+  var unknown = [];
+  var invalid = [];
+  lines.forEach(function (line) {
+    if (!/^\d+$/.test(line)) {
+      if (invalid.indexOf(line) === -1) invalid.push(line);
+    } else if (!data.students[line]) {
+      if (unknown.indexOf(line) === -1) unknown.push(line);
+    } else if (!seen[line]) {
+      seen[line] = true;
+      nums.push(line);
+    }
+  });
+  if (!nums.length) {
+    throw new Error('No roster student numbers in the upload — is that the right file?');
+  }
+
+  rewriteLists(viewer.effective, listName, nums);
+  invalidateModel(viewer.effective);
+  return { saved: nums.length, unknown: unknown, invalid: invalid };
+}
+
+/** Delete one of the calling teacher's custom lists. */
+function deleteList(name, as) {
+  var viewer = resolveViewer(as);
+  if (!viewer) throw new Error('Not authorized.');
+  rewriteLists(viewer.effective, String(name || '').trim(), []);
+  invalidateModel(viewer.effective);
+  return true;
+}
+
+/**
+ * Rewrite the `lists` tab with (email, name)'s rows replaced by `nums` (empty
+ * = delete the list). A read-modify-write of the whole tab — it's small — so a
+ * script lock serializes concurrent saves.
+ */
+function rewriteLists(email, name, nums) {
+  var target = qualifyEmail(email);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var ss = spreadsheet();
+    var sheet = ss.getSheetByName(LISTS_SHEET) || ss.insertSheet(LISTS_SHEET, ss.getNumSheets());
+    var rows = sheetToObjects(sheet)
+      .filter(function (r) {
+        return !(qualifyEmail(r.teacherEmail) === target && String(r.listName || '').trim() === name);
+      })
+      .map(function (r) {
+        return [String(r.teacherEmail), String(r.listName), String(r.studentNumber)];
+      });
+    nums.forEach(function (num) {
+      rows.push([target, name, num]);
+    });
+    sheet.clearContents();
+    sheet.getRange(1, 1, 1, 3).setValues([['teacherEmail', 'listName', 'studentNumber']]);
+    if (rows.length) sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ------------------------------------------------------------------ */
 /* Spreadsheet helpers                                                 */
 /* ------------------------------------------------------------------ */
 
@@ -511,6 +630,12 @@ function readStudents() {
   var rows = sheetToObjects(sheet);
   logTime('readStudents (' + rows.length + ' rows)', t0);
   return rows;
+}
+
+/** All custom-list rows from the `lists` tab ([] until the first list is saved). */
+function readLists() {
+  var sheet = spreadsheet().getSheetByName(LISTS_SHEET);
+  return sheet ? sheetToObjects(sheet) : [];
 }
 
 /** studentNumber -> fileId from the `photos` tab. */
@@ -609,6 +734,27 @@ function isEmailShaped(s) {
 
 function isBerkeleyStaff(email) {
   return /@berkeley\.net$/.test(email);
+}
+
+/**
+ * Resolve the calling user for a request or google.script.run call: the
+ * signed-in user (null if not @berkeley.net staff), their admin status, and
+ * the effective email after honoring an admin's ?as= impersonation (a
+ * non-admin's `as` is ignored). The one gate shared by doGet and the
+ * list-editing endpoints — identity always comes from the session, never the
+ * client.
+ */
+function resolveViewer(asParam) {
+  var actual = normalizeEmail(Session.getActiveUser().getEmail());
+  if (!isBerkeleyStaff(actual)) return null;
+  var isAdmin = readAdmins().has(actual);
+  var effective = (isAdmin && asParam ? qualifyEmail(asParam) : '') || actual;
+  return {
+    actual: actual,
+    effective: effective,
+    impersonating: effective !== actual,
+    isAdmin: isAdmin,
+  };
 }
 
 function jsonForScript(obj) {
@@ -802,6 +948,22 @@ function buildData() {
     t0,
   );
   return { students: students, teachers: teachers };
+}
+
+/**
+ * Drop one viewer's cached model (the chunked 'model:<username>' entry) so
+ * their next load rebuilds it. Used after custom-list edits, where bumping the
+ * global version (clearCaches) would needlessly throw away the roster blob and
+ * every other viewer's model.
+ */
+function invalidateModel(email) {
+  var cache = CacheService.getScriptCache();
+  var key = 'model:' + username(email);
+  var nStr = cache.get(vkey(key + ':n'));
+  if (nStr === null) return;
+  var keys = [vkey(key + ':n')];
+  for (var i = 0; i < Number(nStr); i++) keys.push(vkey(key + ':' + i));
+  cache.removeAll(keys);
 }
 
 /** Invalidate all cached models/admins. Run after editing the roster. */

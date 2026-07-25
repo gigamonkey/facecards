@@ -82,6 +82,9 @@
       if (scope === 'class' && MODEL.classes[id]) {
         return MODEL.classes[id].students.slice();
       }
+      if (scope === 'list' && MODEL.lists && MODEL.lists[id]) {
+        return MODEL.lists[id].students.slice();
+      }
       var all = [];
       Object.keys(MODEL.classes).forEach(function (slug) {
         all = all.concat(MODEL.classes[slug].students);
@@ -92,6 +95,9 @@
     function titleFor(mode, scope, id) {
       if (scope === 'class' && MODEL.classes[id]) {
         return MODEL.classes[id].name;
+      }
+      if (scope === 'list' && MODEL.lists && MODEL.lists[id]) {
+        return MODEL.lists[id].name;
       }
       return 'All my students';
     }
@@ -127,7 +133,13 @@
       app.appendChild(current);
 
       var cards = students.map(function (s) {
-        return buildCard(s, { showNumber: false, nameWithFirst: true, defer: true });
+        // hideClass: list students have no single course/period of the viewer's.
+        return buildCard(s, {
+          showNumber: false,
+          nameWithFirst: true,
+          defer: true,
+          hideClass: scope === 'list',
+        });
       });
 
       var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);
@@ -253,7 +265,11 @@
         '<h3>Browse</h3>' +
         '<p>Just shows the students one at a time — picture, name, and schedule — ' +
         (mobile ? 'swipe left and right' : 'use the arrow keys') +
-        ' to move between them.</p>';
+        ' to move between them.</p>' +
+        '<h3>Custom lists</h3>' +
+        '<p>You can also make your own lists to study: at the bottom of the Mine ' +
+        'page, upload a text file of student numbers (one per line) — or paste ' +
+        'them in. A list can include any students, not just your own.</p>';
       helpOverlay.classList.add('show');
     }
 

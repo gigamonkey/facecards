@@ -32,7 +32,162 @@
 
     home.appendChild(classHead('All students', onStudy, 'all', ''));
 
+    renderLists(home, model, onStudy);
+
     container.appendChild(home);
+  }
+
+  // The custom-lists section of the home view: each saved list as a face grid
+  // with the same Learn/Review/Browse buttons as a class (plus Delete), then
+  // the form for uploading or pasting a new list.
+  function renderLists(home, model, onStudy) {
+    var lists = model.lists || {};
+
+    Object.keys(lists)
+      .sort(function (a, b) {
+        return String(lists[a].name).localeCompare(String(lists[b].name));
+      })
+      .forEach(function (slug) {
+        var list = lists[slug];
+
+        var head = classHead(list.name, onStudy, 'list', slug);
+        head.querySelector('.buttons').appendChild(
+          studyLink('Delete', function () {
+            if (!confirm('Delete the list “' + list.name + '”?')) return;
+            google.script.run
+              .withSuccessHandler(reloadHome)
+              .withFailureHandler(function (err) {
+                alert(err.message);
+              })
+              .deleteList(list.name, listAsParam());
+          }),
+        );
+        home.appendChild(head);
+
+        var faces = el('div', 'faces');
+        list.students
+          .slice()
+          .sort(function (a, b) {
+            return String(a.firstName).localeCompare(String(b.firstName));
+          })
+          .forEach(function (s) {
+            // hideClass: a list spans classes, so there's no one course/period.
+            var card = buildCard(s, { showNumber: true, hideClass: true });
+            attachFlip(card);
+            faces.appendChild(card);
+          });
+        home.appendChild(faces);
+      });
+
+    home.appendChild(buildListForm());
+  }
+
+  // The "Add a list" form: a name plus student numbers from an uploaded text
+  // file or the textarea (the file wins if both are given). Saving replaces a
+  // same-named list; skipped lines come back in the result for a warning.
+  function buildListForm() {
+    var wrap = el('div', 'add-list');
+    wrap.appendChild(el('h2', null, 'Add a list'));
+    wrap.appendChild(
+      el(
+        'p',
+        'hint',
+        'Make a custom list to study: upload a text file of student numbers — ' +
+          'one per line — or paste them below. A list can include any students, ' +
+          'not just your own. Saving under an existing name replaces that list.',
+      ),
+    );
+
+    var form = el('form');
+    var name = el('input');
+    name.type = 'text';
+    name.placeholder = 'List name';
+    name.setAttribute('aria-label', 'List name');
+    name.required = true;
+    form.appendChild(name);
+
+    var file = el('input');
+    file.type = 'file';
+    file.accept = '.txt,text/plain';
+    form.appendChild(file);
+
+    var textarea = el('textarea');
+    textarea.placeholder = 'Or paste student numbers here, one per line';
+    form.appendChild(textarea);
+
+    var save = el('button', null, 'Save list');
+    save.type = 'submit';
+    form.appendChild(save);
+
+    var status = el('p', 'list-status');
+
+    function send(listName, text) {
+      if (!text.trim()) {
+        status.textContent = 'Choose a file or paste some student numbers first.';
+        return;
+      }
+      save.disabled = true;
+      status.textContent = 'Saving…';
+      google.script.run
+        .withSuccessHandler(function (result) {
+          var skipped = (result.unknown || []).concat(result.invalid || []);
+          if (skipped.length) {
+            alert(
+              'Saved ' +
+                result.saved +
+                ' students to “' +
+                listName +
+                '”.\n\nSkipped ' +
+                skipped.length +
+                ' lines that aren’t roster student numbers:\n' +
+                skipped.join('\n'),
+            );
+          }
+          reloadHome();
+        })
+        .withFailureHandler(function (err) {
+          save.disabled = false;
+          status.textContent = err.message;
+        })
+        .saveList(listName, text, listAsParam());
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var listName = name.value.trim();
+      if (!listName) return; // `required` should have caught it
+      if (file.files && file.files.length) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          send(listName, String(reader.result));
+        };
+        reader.onerror = function () {
+          status.textContent = 'Could not read that file.';
+        };
+        reader.readAsText(file.files[0]);
+      } else {
+        send(listName, textarea.value);
+      }
+    });
+
+    wrap.appendChild(form);
+    wrap.appendChild(status);
+    return wrap;
+  }
+
+  // The ?as= to pass to the list endpoints so an admin's edits land under the
+  // impersonated teacher (the server re-checks admin-ness).
+  function listAsParam() {
+    var ctx = window.CTX || {};
+    return ctx.impersonating ? ctx.effective : '';
+  }
+
+  // Full reload of the Mine page after a list edit — the invalidated model
+  // rebuilds server-side with the change.
+  function reloadHome() {
+    var ctx = window.CTX || {};
+    if (ctx.baseUrl) window.top.location.href = appUrl('?learn');
+    else location.reload();
   }
 
   // A class heading with its Learn/Review/Browse buttons — on one row (desktop)

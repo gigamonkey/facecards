@@ -117,13 +117,14 @@ After the classes and the "All students" row, a **My lists** section:
   slug)` with the Learn / Review / Browse buttons, then the face grid of its
   students — plus a small "delete" affordance per list (with a `confirm()`).
 
-- An **"Add a list"** form: a name input and `<input type="file">`. The file
-  is read client-side with `FileReader.readAsText` and the text passed to
-  `google.script.run.saveList(name, text, as)` — no multipart upload
-  machinery, and the server never touches Drive. On success, navigate to
-  `appUrl('?learn')` (a full reload; the freshly-invalidated model rebuilds
-  with the new list). On `unknown` numbers, show them in the confirmation.
-  Disable the submit while the call is in flight.
+- An **"Add a list"** form: a name input, an `<input type="file">`, and a
+  textarea to paste numbers into (file wins if both are given — both feed the
+  same endpoint). The file is read client-side with `FileReader.readAsText`
+  and the text passed to `google.script.run.saveList(name, text, as)` — no
+  multipart upload machinery, and the server never touches Drive. On success,
+  navigate to `appUrl('?learn')` (a full reload; the freshly-invalidated model
+  rebuilds with the new list). On `unknown` numbers, show them in the
+  confirmation. Disable the submit while the call is in flight.
 
 - Help overlay (`js-app`): one added paragraph under "On the Mine page"
   explaining custom lists.
@@ -147,16 +148,12 @@ goal — list-making happens at a desk.
    numbers reported; delete; deep links; other users' cached models unaffected
    (no global cache bump).
 
-## Open questions
+## Decisions (2026-07-25)
 
-1. **Paste as well as upload?** A `<textarea>` to paste numbers into costs
-   almost nothing once `saveList(name, text)` exists (same call, no
-   FileReader) and is friendlier than making a file just to upload it.
-   Recommend: yes — file input *and* textarea feeding the same endpoint.
-2. **Replace-on-same-name** semantics OK, or should re-upload merge?
-   (Recommend replace — it's predictable and "merge" is achievable by
-   re-generating the file.)
-3. Should the `unknown` numbers block the save (make the teacher fix the file)
-   or just be reported after saving the rest? (Plan says save-and-report.)
-4. Any need for admins to see/manage *all* lists, or is per-teacher (plus
-   `?as=` impersonation) enough? (Assume the latter.)
+1. **Paste as well as upload** — yes: file input *and* textarea feeding the
+   same `saveList` endpoint.
+2. **Replace on re-upload** of the same name (no merge).
+3. **Unknown numbers warn, don't block** — save the recognized numbers and
+   report the skipped lines.
+4. **Per-teacher only** — no admin view of all lists; `?as=` impersonation
+   covers admin needs.

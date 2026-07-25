@@ -104,6 +104,14 @@
         return;
       }
 
+      // Browse: no flashcard session, just the photo + info list.
+      if (mode === 'browse') {
+        setView('browse');
+        renderBrowse(app, titleFor(mode, scope, id), students);
+        window.scrollTo(0, 0);
+        return;
+      }
+
       setView('study');
       app.innerHTML = '';
 
@@ -248,7 +256,7 @@
         renderSharedOverview(app, window.SHARED);
       }
       window.scrollTo(0, 0);
-    } else if (ROUTE.mode === 'learn' || ROUTE.mode === 'review') {
+    } else if (ROUTE.mode === 'learn' || ROUTE.mode === 'review' || ROUTE.mode === 'browse') {
       showStudy(ROUTE.mode, ROUTE.scope || 'all', ROUTE.id || '');
     } else if (ROUTE.mode === 'grid') {
       showHome();

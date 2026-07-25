@@ -1,6 +1,6 @@
 <script>
   // Render the home view: the viewer's classes as photo-card grids, with
-  // learn/review links per class and for all of their students. Port of
+  // learn/review/browse links per class and for all of their students. Port of
   // views/index.njk (minus the outer per-teacher loop — it's one teacher).
 
   function renderHome(container, model, onStudy) {
@@ -35,8 +35,8 @@
     container.appendChild(home);
   }
 
-  // A class heading with its Learn/Review buttons — on one row (desktop) or
-  // stacked (mobile), controlled by CSS.
+  // A class heading with its Learn/Review/Browse buttons — on one row (desktop)
+  // or stacked (mobile), controlled by CSS.
   function classHead(name, onStudy, scope, id) {
     var head = el('div', 'class-head');
     head.appendChild(el('h2', null, name));
@@ -44,20 +44,66 @@
     return head;
   }
 
-  // A Learn/Review button pair for a study scope.
+  // The Learn/Review/Browse buttons for a study scope.
   function buttonsRow(onStudy, scope, id) {
     var div = el('div', 'buttons');
-    div.appendChild(
-      studyLink('Learn', function () {
-        onStudy('learn', scope, id);
-      }),
-    );
-    div.appendChild(
-      studyLink('Review', function () {
-        onStudy('review', scope, id);
-      }),
-    );
+    ['learn', 'review', 'browse'].forEach(function (mode) {
+      div.appendChild(
+        studyLink(mode.charAt(0).toUpperCase() + mode.slice(1), function () {
+          onStudy(mode, scope, id);
+        }),
+      );
+    });
     return div;
+  }
+
+  // Render the browse view: every student in the scope as a photo + info row
+  // (the same layout as the shared-with table, whose CSS it reuses). Photos are
+  // deferred so browsers that block direct Drive thumbnails fall back to the
+  // proxy.
+  function renderBrowse(container, title, students) {
+    container.innerHTML = '';
+    var wrap = el('div');
+    wrap.id = 'browse';
+    wrap.appendChild(el('h1', null, title));
+
+    var table = el('table', 'shared-table');
+    var tbody = el('tbody');
+    var photoCells = [];
+    students
+      .slice()
+      .sort(function (a, b) {
+        return String(a.firstName).localeCompare(String(b.firstName));
+      })
+      .forEach(function (s) {
+        var tr = el('tr');
+
+        var tdPhoto = el('td', 'photo');
+        if (s.fileId) {
+          tdPhoto.appendChild(loadingBox(s.fileId));
+          photoCells.push(tdPhoto);
+        } else {
+          tdPhoto.appendChild(el('div', 'initials', initials(s)));
+        }
+        tr.appendChild(tdPhoto);
+
+        var tdInfo = el('td', 'info');
+        tdInfo.appendChild(
+          el('p', 'name', s.nickname ? s.nickname + ' (' + s.firstName + ')' : s.firstName),
+        );
+        tdInfo.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
+        tdInfo.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
+        tdInfo.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
+        tdInfo.appendChild(el('p', null, String(s.studentNumber)));
+        tr.appendChild(tdInfo);
+
+        tbody.appendChild(tr);
+      });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+
+    loadCardImages(photoCells);
   }
 
   function studyLink(text, handler) {

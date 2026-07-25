@@ -142,22 +142,32 @@
   }
 
   // Fetch a photo through the server as a data URL and hand it to swap(). Cached
-  // by fileId so card repeats (Leitner, review re-runs) don't refetch.
-  function proxyLoad(fileId, swap) {
+  // by fileId so card repeats (Leitner, review re-runs) don't refetch. fail()
+  // (optional) fires when no photo could be fetched.
+  function proxyLoad(fileId, swap, fail) {
     if (PHOTO_CACHE[fileId]) {
       var cached = el('img');
       cached.src = PHOTO_CACHE[fileId];
       swap(cached);
       return;
     }
-    if (!hasServer()) return;
+    if (!hasServer()) {
+      if (fail) fail();
+      return;
+    }
     google.script.run
       .withSuccessHandler(function (dataUrl) {
-        if (!dataUrl) return;
+        if (!dataUrl) {
+          if (fail) fail();
+          return;
+        }
         PHOTO_CACHE[fileId] = dataUrl;
         var img = el('img');
         img.src = dataUrl;
         swap(img);
+      })
+      .withFailureHandler(function () {
+        if (fail) fail();
       })
       .getPhoto(fileId);
   }
@@ -207,6 +217,38 @@
         img.onload = null;
         swap(img);
       }
+    });
+  }
+
+  // Load every deferred photo box in `containers` (each holding a loadingBox)
+  // at once — for views that show all photos eagerly (browse). Where direct
+  // loads work each container goes through loadCardImage (the browser queues
+  // per-host connections itself); otherwise proxy fetches are pumped through a
+  // pool so a long roster doesn't overrun Apps Script's simultaneous-execution
+  // limit.
+  function loadCardImages(containers) {
+    whenDirectKnown(function (ok) {
+      if (ok) {
+        containers.forEach(loadCardImage);
+        return;
+      }
+      var i = 0;
+      function pump() {
+        while (i < containers.length) {
+          var box = containers[i++].querySelector('.loading');
+          if (box && box.dataset.fileid) {
+            var fileId = box.dataset.fileid;
+            delete box.dataset.fileid;
+            var swap = function (img) {
+              if (box.parentNode) box.parentNode.replaceChild(img, box);
+              pump();
+            };
+            proxyLoad(fileId, swap, pump);
+            return;
+          }
+        }
+      }
+      for (var n = 0; n < PRELOAD_POOL; n++) pump();
     });
   }
 

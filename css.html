@@ -269,8 +269,9 @@
     cursor: pointer;
   }
 
-  /* ---- Shared-with table view ---- */
-  body.view-shared {
+  /* ---- Shared-with table view (also browse, which reuses its layout) ---- */
+  body.view-shared,
+  body.view-browse {
     width: 90%;
     margin: calc(var(--nav-h) + 1em) auto;
     padding: 2em 2em 5em;
@@ -286,7 +287,8 @@
     font-size: 0.95em;
     color: #445;
   }
-  #shared h1 {
+  #shared h1,
+  #browse h1 {
     margin: 0.25em 0 0.75em;
   }
   .shared-table {
@@ -489,17 +491,25 @@
     }
     body.view-home .buttons {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.5em;
       margin-bottom: 0.3em;
     }
     body.view-home .buttons a {
-      flex: 1; /* Learn / Review each take half the width */
+      /* Learn / Review take half the width each; Browse wraps to its own
+         full-width row below them. */
+      flex: 1 1 40%;
       text-align: center;
       padding: 0.7em 0;
       font-size: clamp(16px, 4.5vmin, 22px);
     }
     body.view-study {
       padding-bottom: 0;
+    }
+    body.view-browse {
+      width: 100vw;
+      margin: calc(var(--nav-h) + 1vh) auto 5vh;
+      padding: 1em;
     }
   }
 </style>

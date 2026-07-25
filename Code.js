@@ -92,8 +92,8 @@ function doGet(e) {
   }
 
   var mode;
-  if (params.mode === 'learn' || params.mode === 'review') {
-    mode = params.mode; // study deep link
+  if (params.mode === 'learn' || params.mode === 'review' || params.mode === 'browse') {
+    mode = params.mode; // study/browse deep link
   } else if (params.learn !== undefined) {
     mode = 'grid'; // ?learn -> the class face grids
   } else {

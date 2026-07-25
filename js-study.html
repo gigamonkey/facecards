@@ -41,6 +41,7 @@
       else handle('none');
     }
     function onTouchMove(e) {
+      if (helpOpen()) return; // the help box scrolls
       e.preventDefault(); // suppress scrolling while studying
     }
     function onKeyDown(e) {

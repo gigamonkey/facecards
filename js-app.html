@@ -208,6 +208,9 @@
       overlay.addEventListener('click', function (e) {
         if (e.target === overlay) overlay.classList.remove('show');
       });
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') overlay.classList.remove('show');
+      });
 
       var box = el('div', 'help-box');
       var close = el('button', 'help-close', '×');

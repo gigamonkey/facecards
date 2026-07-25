@@ -14,7 +14,13 @@ come from a Drive folder — direct thumbnail URLs where the browser allows them
 proxied through the script where it doesn't (mobile Safari). Data is served
 from a normalized roster cached in `CacheService` (version-busted on edits —
 run `clearCaches()` after roster edits or model-shape changes), so warm loads
-are ~250 ms. No implementation plans are outstanding.
+are ~250 ms.
+
+## Remaining plans
+
+- **`custom-lists.md`** — teacher-uploaded custom lists of student numbers
+  (stored in a `lists` spreadsheet tab, studied like a class). Not started;
+  design still under discussion (see the plan's open questions).
 
 ## Loose ends
 

@@ -111,6 +111,11 @@ live; unchecked items are planned.
 
 ## Planned
 
+- [ ] Custom lists: a teacher can upload a text file of student numbers (one
+      per line, any students in the roster) as a named list that appears on
+      the Mine page with its own face grid and Learn / Review / Browse, and
+      can be replaced or deleted (see `custom-lists.md`)
+
 - [ ] Per-section volunteer access: a teacher can assign a volunteer to a
       specific section, and that volunteer gets a page scoped to just that
       section's grid and learn/review (v2 — see `done/appscript-conversion.md`)

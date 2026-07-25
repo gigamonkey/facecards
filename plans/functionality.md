@@ -16,8 +16,12 @@ live; unchecked items are planned.
 
 ## Home and navigation
 
-- [x] A top navbar (Home / Learn / Shared) appears on every page; admins also get
+- [x] A top navbar (Home / Mine / Shared) appears on every page; admins also get
       the impersonation controls (view-as, "back to me") there
+
+- [x] A "?" in the navbar opens a help overlay explaining Mine vs. Shared and
+      the Learn / Review / Browse modes, with device-appropriate instructions
+      (tap/swipe vs. keys); closed by its ×, clicking the backdrop, or Escape
 
 - [x] Home page is a menu with two choices: "Learn students' names" (the class
       face grids, at `?learn`) and "See shared students" (`?shared`), plus a QR
@@ -32,8 +36,8 @@ live; unchecked items are planned.
 - [x] Clicking a card flips it between the photo and the student's info
       (name, nickname, grade/gender, course/period, student number)
 
-- [x] Per-class "learn" / "review" links, plus "learn all" / "review all"
-      across all of the teacher's students
+- [x] Per-class Learn / Review / Browse buttons, plus the same three across all
+      of the teacher's students
 
 - [x] Home and shared grids show student photos via Google Drive thumbnail URLs;
       a student with no photo shows a box with their initials instead (everywhere
@@ -42,7 +46,7 @@ live; unchecked items are planned.
 - [x] On phones the photo grid is hidden and study mode is used instead
 
 - [x] Shareable deep links open a specific study session directly
-      (`?mode=learn|review&scope=class&id=<slug>`)
+      (`?mode=learn|review|browse&scope=class&id=<slug>`)
 
 - [x] `?shared-with=<teacher>` shows a table of students the current teacher
       shares with the named teacher — photo, flashcard info, your class(es), and
@@ -72,14 +76,18 @@ live; unchecked items are planned.
 - [x] A not-yet-loaded study card shows the student's initials, not their name,
       so it doesn't give away the answer
 
-- [x] On phones, the study instructions are tucked behind a "?" button (a short,
-      touch-specific tip); larger photos and info text than the grids
+- [x] On phones, larger study photos and info text than the grids
 
 - [x] **Learn** mode: spaced-repetition engine (Leitner boxes sized by the
       Fibonacci sequence); wrong answers recycle to the deck
 
 - [x] **Review** mode: one pass through the deck, then re-runs only the missed
       cards until none remain ("Perfect run!" when nothing was missed)
+
+- [x] **Browse** mode: the students one at a time with everything visible — the
+      photo, name, grade/gender, and a table of the student's full schedule
+      (period, class, teacher, across all their teachers) — swiping or arrow
+      keys to move between students
 
 - [x] Study scope is one class or all of the teacher's students
 
@@ -91,11 +99,15 @@ live; unchecked items are planned.
       impersonate any user via `?as=` or a "view as" box, with a banner and a
       "back to my view" link
 
+- [x] Impersonation survives navigation — client-built links re-append `?as=`
+      (Apps Script offers no cookies or session state)
+
 - [x] Bare usernames are accepted anywhere an email is expected (admins tab and
       "view as"); `@berkeley.net` is appended automatically
 
 - [x] Photo lookup is (re)built from the Drive folder into a `photos` sheet tab
-      by running `refreshPhotoMap` after uploading new images
+      by running `refreshPhotoMap` after uploading new images; it also writes a
+      `missing photos` tab (personId, studentNumber) of students with no photo
 
 ## Planned
 

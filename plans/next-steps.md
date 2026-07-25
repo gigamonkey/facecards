@@ -1,16 +1,20 @@
 # Next steps
 
 Facecards is live as a Google Apps Script web app (see
-`done/appscript-conversion.md`), deployed on the `app-script` branch and managed
-with `hug`/`clasp`. As of 2026-07-23 it has: the `@berkeley.net`-only gate with
-per-teacher scoping, a top navbar (Home / Learn / Shared), a menu home page with
-a QR code, class face grids (`?learn`), learn/review study modes, the shared
-views (`?shared` overview and `?shared-with=` table, with mobile list + swipe
-variants), admin impersonation, and the no-sections landing page. Photos come
-from a Drive folder — grids use thumbnail URLs, study mode proxies them through
-the script so they work on mobile Safari. Data is served from a normalized
-roster cached in `CacheService` (version-busted on edits), so warm loads are
-~250 ms. No implementation plans are outstanding.
+`done/appscript-conversion.md`), managed with `hug`/`clasp`. As of 2026-07-25 it
+has: the `@berkeley.net`-only gate with per-teacher scoping, a top navbar
+(Home / Mine / Shared) with a sectioned help overlay, a menu home page with a
+QR code, class face grids (`?learn`) with Learn / Review / Browse per class and
+for all students, the learn/review study modes, a browse carousel (photo, info,
+and a period/class/teacher schedule table always visible; swipe or arrow keys),
+the shared views (`?shared` overview and `?shared-with=` table, with mobile
+list + swipe variants), admin impersonation that survives navigation (client
+links re-append `?as=` via `appUrl`), and the no-sections landing page. Photos
+come from a Drive folder — direct thumbnail URLs where the browser allows them,
+proxied through the script where it doesn't (mobile Safari). Data is served
+from a normalized roster cached in `CacheService` (version-busted on edits —
+run `clearCaches()` after roster edits or model-shape changes), so warm loads
+are ~250 ms. No implementation plans are outstanding.
 
 ## Loose ends
 

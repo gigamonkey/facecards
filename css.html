@@ -58,11 +58,13 @@
   .swipe-card .loading {
     width: 60vw;
     max-width: 260px;
+    margin: 0 auto; /* block boxes need centering the inline <img> gets free */
   }
   .swipe-card .initials {
     width: 60vw;
     max-width: 260px;
     font-size: min(18vw, 5rem);
+    margin: 0 auto;
   }
   .shared-table td.photo .initials {
     width: 100px;
@@ -389,6 +391,20 @@
   }
   .swipe-classes p {
     margin: 0.2em 0;
+  }
+  .swipe-schedule {
+    margin: 0.75em auto 0;
+    border-collapse: collapse;
+    font-size: 0.9em;
+    text-align: left;
+  }
+  .swipe-schedule td {
+    border: 1px solid #ccd;
+    padding: 2px 8px;
+    vertical-align: top;
+  }
+  .swipe-schedule td.period {
+    text-align: center;
   }
 
   /* ---- Home menu ---- */

@@ -149,6 +149,7 @@ function buildModelUncached(email) {
         var o = studentBase(data, num);
         o.course = name;
         o.period = period;
+        o.schedule = scheduleFor(data, num); // full schedule, for browse mode
         return o;
       }),
     };
@@ -331,6 +332,27 @@ function myStudentNums(teacher) {
     });
   });
   return nums;
+}
+
+// A student's full schedule across all teachers, sorted by period: one entry
+// per section they sit in, as { period, course, teacher }.
+function scheduleFor(data, num) {
+  var st = data.students[num];
+  if (!st) return [];
+  var rows = [];
+  st.teachers.forEach(function (u) {
+    var t = data.teachers[u];
+    if (!t) return;
+    Object.keys(t.periods).forEach(function (p) {
+      if (t.periods[p].students.indexOf(num) !== -1) {
+        rows.push({ period: p, course: t.periods[p].courses.join(' / '), teacher: t.full });
+      }
+    });
+  });
+  rows.sort(function (a, b) {
+    return periodNum(a.period) - periodNum(b.period) || cmpStr(a.course, b.course);
+  });
+  return rows;
 }
 
 // The class name(s) and earliest period a student sits in for one teacher.

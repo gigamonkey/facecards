@@ -106,6 +106,22 @@
     info.appendChild(el('p', null, String(s.studentNumber)));
     card.appendChild(info);
 
+    // The student's full schedule: period, class, teacher. (Guarded — a model
+    // cached before schedules were added won't have it.)
+    if (s.schedule && s.schedule.length) {
+      var table = el('table', 'swipe-schedule');
+      var tbody = el('tbody');
+      s.schedule.forEach(function (row) {
+        var tr = el('tr');
+        tr.appendChild(el('td', 'period', String(row.period)));
+        tr.appendChild(el('td', null, row.course));
+        tr.appendChild(el('td', null, row.teacher));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      card.appendChild(table);
+    }
+
     return card;
   }
 

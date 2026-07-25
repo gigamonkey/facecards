@@ -180,6 +180,7 @@ function listsFor(data, email) {
     if (!lists[slug]) lists[slug] = { slug: slug, name: name, students: [] };
     var o = studentBase(data, num);
     o.schedule = scheduleFor(data, num); // full schedule, for browse mode
+    o.extra = parseExtra(r.extra); // spare TSV columns, shown on the card back
     lists[slug].students.push(o);
   });
   return lists;
@@ -524,16 +525,19 @@ function getPhoto(fileId) {
 /* Custom lists (admin-only)                                           */
 /*                                                                     */
 /* Admins upload (or paste) a plain-text list of student numbers, one  */
-/* per line, stored in the `lists` tab as one row per (teacherEmail,   */
-/* listName, studentNumber) and served back as model.lists, studied    */
-/* like a class. Saving replaces any same-named list. Admin-only       */
-/* because a list can name any student in the roster, not just the     */
-/* uploader's own.                                                     */
+/* per line — or TSV rows: student number first, other columns kept as */
+/* extra card-back lines. Stored in the `lists` tab as one row per     */
+/* (teacherEmail, listName, studentNumber, extra) and served back as   */
+/* model.lists, studied like a class. Saving replaces any same-named   */
+/* list. Admin-only because a list can name any student in the roster, */
+/* not just the uploader's own.                                        */
 /* ------------------------------------------------------------------ */
 
 /**
  * Save (or replace) a custom list for the calling teacher. `text` is the
- * uploaded file or pasted numbers, one student number per line. Lines that
+ * uploaded file or pasted numbers, one student number per line — or TSV rows
+ * whose first column is the student number, with the remaining columns kept
+ * as extra lines for the back of the student's card. Lines that
  * aren't in the roster (or aren't numbers at all) are skipped and reported
  * back so the client can warn about them. Called via google.script.run; `as`
  * is the client's ?as= param so an admin's edits land under the impersonated
@@ -558,26 +562,33 @@ function saveList(name, text, as) {
 
   var data = getData();
   var seen = {};
-  var nums = [];
+  var entries = [];
   var unknown = [];
   var invalid = [];
   lines.forEach(function (line) {
-    if (!/^\d+$/.test(line)) {
+    var fields = line.split('\t').map(function (s) {
+      return s.trim();
+    });
+    var num = fields[0];
+    var extra = fields.slice(1).filter(function (s) {
+      return s !== '';
+    });
+    if (!/^\d+$/.test(num)) {
       if (invalid.indexOf(line) === -1) invalid.push(line);
-    } else if (!data.students[line]) {
-      if (unknown.indexOf(line) === -1) unknown.push(line);
-    } else if (!seen[line]) {
-      seen[line] = true;
-      nums.push(line);
+    } else if (!data.students[num]) {
+      if (unknown.indexOf(num) === -1) unknown.push(num);
+    } else if (!seen[num]) {
+      seen[num] = true;
+      entries.push({ num: num, extra: extra });
     }
   });
-  if (!nums.length) {
+  if (!entries.length) {
     throw new Error('No roster student numbers in the upload — is that the right file?');
   }
 
-  rewriteLists(viewer.effective, listName, nums);
+  rewriteLists(viewer.effective, listName, entries);
   invalidateModel(viewer.effective);
-  return { saved: nums.length, unknown: unknown, invalid: invalid };
+  return { saved: entries.length, unknown: unknown, invalid: invalid };
 }
 
 /** Delete one of the calling admin's custom lists (same gate as saveList). */
@@ -590,11 +601,13 @@ function deleteList(name, as) {
 }
 
 /**
- * Rewrite the `lists` tab with (email, name)'s rows replaced by `nums` (empty
- * = delete the list). A read-modify-write of the whole tab — it's small — so a
- * script lock serializes concurrent saves.
+ * Rewrite the `lists` tab with (email, name)'s rows replaced by `entries`
+ * ({ num, extra } objects; empty = delete the list). The `extra` column holds
+ * a row's spare TSV fields as a JSON array (blank when there are none). A
+ * read-modify-write of the whole tab — it's small — so a script lock
+ * serializes concurrent saves.
  */
-function rewriteLists(email, name, nums) {
+function rewriteLists(email, name, entries) {
   var target = qualifyEmail(email);
   var lock = LockService.getScriptLock();
   lock.waitLock(30000);
@@ -606,14 +619,19 @@ function rewriteLists(email, name, nums) {
         return !(qualifyEmail(r.teacherEmail) === target && String(r.listName || '').trim() === name);
       })
       .map(function (r) {
-        return [String(r.teacherEmail), String(r.listName), String(r.studentNumber)];
+        return [
+          String(r.teacherEmail),
+          String(r.listName),
+          String(r.studentNumber),
+          r.extra == null ? '' : String(r.extra),
+        ];
       });
-    nums.forEach(function (num) {
-      rows.push([target, name, num]);
+    entries.forEach(function (e) {
+      rows.push([target, name, e.num, e.extra.length ? JSON.stringify(e.extra) : '']);
     });
     sheet.clearContents();
-    sheet.getRange(1, 1, 1, 3).setValues([['teacherEmail', 'listName', 'studentNumber']]);
-    if (rows.length) sheet.getRange(2, 1, rows.length, 3).setValues(rows);
+    sheet.getRange(1, 1, 1, 4).setValues([['teacherEmail', 'listName', 'studentNumber', 'extra']]);
+    if (rows.length) sheet.getRange(2, 1, rows.length, 4).setValues(rows);
   } finally {
     lock.releaseLock();
   }
@@ -637,6 +655,26 @@ function readStudents() {
   var rows = sheetToObjects(sheet);
   logTime('readStudents (' + rows.length + ' rows)', t0);
   return rows;
+}
+
+/**
+ * A `lists` tab `extra` cell -> array of card-back lines. rewriteLists stores
+ * a JSON array, but a hand-edited cell of plain text works too (one line).
+ */
+function parseExtra(cell) {
+  var raw = cell == null ? '' : String(cell).trim();
+  if (!raw) return [];
+  try {
+    var parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map(function (x) {
+        return String(x);
+      });
+    }
+  } catch (err) {
+    // fall through — treat the cell as literal text
+  }
+  return [raw];
 }
 
 /** All custom-list rows from the `lists` tab ([] until the first list is saved). */

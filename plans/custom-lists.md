@@ -166,3 +166,8 @@ goal — list-making happens at a desk.
 5. **Admin-only** (added after implementation): since a list can include any
    student in the roster, the feature is gated to emails in the `admins` tab —
    non-admins get no lists section at all, and the endpoints refuse them.
+6. **TSV extras** (added after implementation): an upload may be a TSV whose
+   first column is the student number; the remaining columns are stored in an
+   `extra` column on the `lists` tab (as a JSON array; a hand-edited plain-text
+   cell also works, as one line) and rendered one-per-line on the back of the
+   card in the grid and study modes.

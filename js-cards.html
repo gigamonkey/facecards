@@ -50,6 +50,10 @@
     if (!opts.hideClass) {
       back.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
     }
+    // Custom-list students can carry extra lines (the spare TSV columns).
+    (s.extra || []).forEach(function (line) {
+      back.appendChild(el('p', null, line));
+    });
     if (opts.showNumber) back.appendChild(el('p', null, String(s.studentNumber)));
     card.appendChild(back);
 

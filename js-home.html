@@ -96,8 +96,10 @@
         'p',
         'hint',
         'Make a custom list to study: upload a text file of student numbers — ' +
-          'one per line — or paste them below. A list can include any students, ' +
-          'not just your own. Saving under an existing name replaces that list.',
+          'one per line — or paste them below. A .tsv works too: the first ' +
+          'column is the student number and any other columns show on the back ' +
+          'of the card. A list can include any students, not just your own. ' +
+          'Saving under an existing name replaces that list.',
       ),
     );
 
@@ -111,7 +113,7 @@
 
     var file = el('input');
     file.type = 'file';
-    file.accept = '.txt,text/plain';
+    file.accept = '.txt,.tsv,text/plain,text/tab-separated-values';
     form.appendChild(file);
 
     var textarea = el('textarea');

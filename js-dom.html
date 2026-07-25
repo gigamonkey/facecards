@@ -22,4 +22,15 @@
     if (text !== undefined && text !== null) e.textContent = text;
     return e;
   }
+
+  // Build a full-page app URL from a query string ('' | '?learn' | ...),
+  // preserving admin impersonation (?as=) across the reload.
+  function appUrl(query) {
+    var ctx = window.CTX || {};
+    var url = (ctx.baseUrl || '') + (query || '');
+    if (ctx.impersonating && ctx.effective) {
+      url += (url.indexOf('?') >= 0 ? '&' : '?') + 'as=' + encodeURIComponent(ctx.effective);
+    }
+    return url;
+  }
 </script>

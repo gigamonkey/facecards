@@ -98,7 +98,7 @@
     data.teachers.forEach(function (t) {
       var h2 = el('h2');
       var link = el('a', null, t.full || t.last || t.key);
-      link.href = baseUrl + '?shared-with=' + encodeURIComponent(t.key);
+      link.href = appUrl('?shared-with=' + encodeURIComponent(t.key));
       if (baseUrl) link.target = '_top';
       h2.appendChild(link);
       wrap.appendChild(h2);
@@ -141,7 +141,7 @@
     data.teachers.forEach(function (t) {
       var row = el('div', 'shared-list-row');
       var link = el('a', null, t.full || t.last || t.key);
-      link.href = baseUrl + '?shared-with=' + encodeURIComponent(t.key);
+      link.href = appUrl('?shared-with=' + encodeURIComponent(t.key));
       if (baseUrl) link.target = '_top';
       row.appendChild(link);
       row.appendChild(el('span', 'count', ' (' + t.students.length + ' shared)'));

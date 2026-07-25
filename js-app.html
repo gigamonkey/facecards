@@ -73,7 +73,7 @@
 
     function menuBox(label, query) {
       var box = el('a', 'menu-box', label);
-      box.href = (CTX.baseUrl || '') + query;
+      box.href = appUrl(query);
       if (CTX.baseUrl) box.target = '_top';
       return box;
     }
@@ -136,11 +136,12 @@
       banner.innerHTML = '';
       var base = CTX.baseUrl || '';
 
-      // Nav links — everyone.
+      // Nav links — everyone. appUrl keeps ?as= so impersonation survives the
+      // full-page reload.
       var nav = el('div', 'nav-links');
-      nav.appendChild(navLink('Home', base));
-      nav.appendChild(navLink('Learn', base + '?learn'));
-      nav.appendChild(navLink('Shared', base + '?shared'));
+      nav.appendChild(navLink('Home', appUrl('')));
+      nav.appendChild(navLink('Learn', appUrl('?learn')));
+      nav.appendChild(navLink('Shared', appUrl('?shared')));
       banner.appendChild(nav);
 
       var help = el('button', 'nav-help', '?');

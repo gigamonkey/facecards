@@ -42,8 +42,8 @@ token in the URL: `https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit`
 Owned by (or shared only with) the deploying account — nobody else needs access,
 because the app reads it _as_ that account.
 
-- **First tab — student data.** Must be the first tab. Row 1 is a header row;
-  the code keys off these column names:
+- **`rosters` tab — student data.** A tab literally named `rosters`. Row 1 is a
+  header row; the code keys off these column names:
   `studentNumber`, `firstName`, `middleName`, `lastName`, `nickname`, `period`,
   `course`, `gender`, `teacherEmail`, `personId`, `grade`, `teacherName`.
   Each teacher sees only the rows whose `teacherEmail` matches their login.

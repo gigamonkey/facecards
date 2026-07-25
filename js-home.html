@@ -202,7 +202,7 @@
     else location.reload();
   }
 
-  // A class heading with its Learn/Review/Browse buttons — on one row (desktop)
+  // A class heading with its study-mode buttons — on one row (desktop)
   // or stacked (mobile), controlled by CSS.
   function classHead(name, onStudy, scope, id) {
     var head = el('div', 'class-head');
@@ -211,10 +211,12 @@
     return head;
   }
 
-  // The Learn/Review/Browse buttons for a study scope.
+  // The Learn/Classic/Review/Browse buttons for a study scope. (Classic is the
+  // old Leitner-box learn scheduler, kept around to compare against Learn's
+  // forgetting-curve scheduler.)
   function buttonsRow(onStudy, scope, id) {
     var div = el('div', 'buttons');
-    ['learn', 'review', 'browse'].forEach(function (mode) {
+    ['learn', 'classic', 'review', 'browse'].forEach(function (mode) {
       div.appendChild(
         studyLink(mode.charAt(0).toUpperCase() + mode.slice(1), function () {
           onStudy(mode, scope, id);

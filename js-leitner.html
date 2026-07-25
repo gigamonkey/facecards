@@ -1,0 +1,110 @@
+<script>
+  // "Classic" learn engine: Leitner boxes whose sizes follow the Fibonacci
+  // sequence. A correct answer promotes a card to the next row; a wrong answer
+  // sends it back to the deck. This is the original "Learn" scheduler, kept
+  // alongside the forgetting-curve engine in js-learn for comparison.
+
+  function LeitnerRow(size) {
+    this.size = size;
+    this.cards = [];
+  }
+  LeitnerRow.prototype.isOverfull = function () {
+    return this.cards.length > this.size;
+  };
+  LeitnerRow.prototype.next = function () {
+    return this.cards.pop();
+  };
+  LeitnerRow.prototype.add = function (card) {
+    this.cards.unshift(card);
+  };
+
+  function LeitnerState(cards) {
+    this.deck = shuffled(cards);
+    this.row = 0;
+    this.rows = [];
+
+    var a = 0;
+    var b = 1;
+    while (a < this.deck.length) {
+      this.rows.push(new LeitnerRow(a));
+      var t = a + b;
+      a = b;
+      b = t;
+    }
+    this.rows.push(new LeitnerRow(a));
+
+  }
+
+  LeitnerState.prototype.firstRow = function () {
+    return this.rows[0];
+  };
+
+  LeitnerState.prototype.currentRow = function () {
+    return this.rows[this.row];
+  };
+
+  LeitnerState.prototype.next = function () {
+    // Emptied the deck and only one, not-overfull row remains: everything has
+    // been moved into a sufficiently large row, so we're done.
+    if (
+      this.deck.length === 0 &&
+      this.rows.length === 1 &&
+      !this.currentRow().isOverfull()
+    ) {
+      return null;
+    }
+
+    // Mid-promotion, or a wrong answer just reset us to row 0: drain overfull.
+    if (this.currentRow().isOverfull()) {
+      return this.currentRow().next();
+    }
+
+    // Back at a non-overfull row 0: refill from the deck, or if the deck is
+    // empty promote the next row up to become the deck.
+    if (this.deck.length > 0) {
+      this.firstRow().add(this.deck.pop());
+    } else {
+      this.deck = this.rows.shift().cards;
+    }
+    return this.next();
+  };
+
+  LeitnerState.prototype.correct = function (card) {
+    this.row++;
+    this.currentRow().add(card);
+    if (!this.currentRow().isOverfull()) {
+      this.row = 0;
+    }
+  };
+
+  LeitnerState.prototype.incorrect = function (card) {
+    // Send the missed card back to the bottom to be re-learned. Early in a run
+    // row 0 is a size-0 box, so pushing the card to the deck returns it there
+    // and it climbs again on its own -- leave that path unchanged.
+    if (this.firstRow().size === 0) {
+      this.row = 0;
+      this.deck.push(card);
+      return;
+    }
+    // Late in a run the small boxes have been shifted away (see next()), so
+    // row 0 is a large box. A card dropped there is buried and can ride a bulk
+    // promotion un-quizzed -- never seen again before the run ends. Rebuild a
+    // short [0, 1] bottom ladder and send the missed card back down it alongside
+    // a few random cards pulled from the bottom box. The size-0 box guarantees
+    // the missed card is re-asked; the size-1 box staggers the re-asks so it is
+    // spaced among that cohort before they all climb back to the big box.
+    var donor = this.firstRow();
+    var cohort = [card];
+    var companions = Math.min(3, donor.cards.length);
+    for (var i = 0; i < companions; i++) {
+      cohort.push(donor.cards.splice(Math.floor(Math.random() * donor.cards.length), 1)[0]);
+    }
+    this.rows.unshift(new LeitnerRow(1));
+    this.rows.unshift(new LeitnerRow(0));
+    this.row = 0;
+    var order = shuffled(cohort);
+    for (var j = 0; j < order.length; j++) {
+      this.deck.push(order[j]);
+    }
+  };
+</script>

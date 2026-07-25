@@ -142,7 +142,12 @@
         });
       });
 
-      var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);
+      var state =
+        mode === 'learn'
+          ? new LearnState(cards)
+          : mode === 'classic'
+            ? new LeitnerState(cards)
+            : new ReviewState(cards);
       teardownStudy = runStudy(state, current);
       preloadPhotos(
         students.map(function (s) {
@@ -259,6 +264,9 @@
         '<p><strong>Learn</strong> uses spaced repetition: cards you miss come back ' +
         'right away, while cards you get come back less and less often until you’ve ' +
         'learned everyone.</p>' +
+        '<p><strong>Classic</strong> is the older Learn scheduler, which moves cards ' +
+        'through a fixed ladder of boxes instead — try both and use whichever you ' +
+        'like better.</p>' +
         '<p><strong>Review</strong> is a more efficient way to check ' +
         'that you still remember everyone — a single pass through the whole group, ' +
         'with anyone you missed coming back at the end.</p>' +
@@ -300,7 +308,12 @@
         renderSharedOverview(app, window.SHARED);
       }
       window.scrollTo(0, 0);
-    } else if (ROUTE.mode === 'learn' || ROUTE.mode === 'review' || ROUTE.mode === 'browse') {
+    } else if (
+      ROUTE.mode === 'learn' ||
+      ROUTE.mode === 'classic' ||
+      ROUTE.mode === 'review' ||
+      ROUTE.mode === 'browse'
+    ) {
       showStudy(ROUTE.mode, ROUTE.scope || 'all', ROUTE.id || '');
     } else if (ROUTE.mode === 'grid') {
       showHome();

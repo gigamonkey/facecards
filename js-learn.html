@@ -1,110 +1,119 @@
 <script>
-  // "Learn" engine: Leitner boxes whose sizes follow the Fibonacci sequence.
-  // A correct answer promotes a card to the next row; a wrong answer sends it
-  // back to the deck. Ported verbatim from public/js/learn.js (de-moduled).
+  // "Learn" engine: probabilistic spaced repetition via a per-card forgetting
+  // curve. Each card carries a stability s (a half-life measured in cards
+  // asked, not wall-clock time) and the trial number at which it was last
+  // shown. The predicted chance the student still recalls a card t trials
+  // after seeing it is R = 2^(-t/s), so its urgency -- the chance it has been
+  // forgotten -- is w = 1 - R. The next card is drawn at random with
+  // probability proportional to w.
+  //
+  // The bookkeeping falls out of the decay function: showing a card resets
+  // t to 0, so its urgency drops to nothing and climbs back on its own. A
+  // correct answer multiplies s by 1 + GROWTH * (1 - R): the more forgotten
+  // the card was when it was asked, the more the correct answer proves, so
+  // the more its stability grows. (Answering while the card is still fresh
+  // proves little, so a card can only graduate by surviving real gaps.) A
+  // miss resets s to the starting value, so the card reasserts itself soon.
+  // New cards are dealt in only when no already-seen card is urgent enough
+  // -- which also means that when every active card is still fresh, the pool
+  // grows instead of re-asking too early, and gaps stretch on their own. A
+  // card graduates out of the session once s reaches GRADUATED_S -- or, late
+  // in the session, a lower bar: with only a few cards left in play the
+  // session can't produce long gaps, so it stops demanding retention it has
+  // no way to test (this is what keeps the last card from being drilled
+  // back-to-back forever). The session ends when every card has graduated.
 
-  function LearnRow(size) {
-    this.size = size;
-    this.cards = [];
-  }
-  LearnRow.prototype.isOverfull = function () {
-    return this.cards.length > this.size;
-  };
-  LearnRow.prototype.next = function () {
-    return this.cards.pop();
-  };
-  LearnRow.prototype.add = function (card) {
-    this.cards.unshift(card);
-  };
+  var LEARN_START_S = 1; // stability of a new or just-missed card
+  var LEARN_GROWTH = 3; // stability multiplier is 1 + this * (1 - R)
+  var LEARN_GRADUATED_S = 16; // stability at which a card leaves the session
+  var LEARN_INTRODUCE_BELOW = 0.5; // deal a new card when max urgency is below this
 
   function LearnState(cards) {
-    this.deck = shuffled(cards);
-    this.row = 0;
-    this.rows = [];
-
-    var a = 0;
-    var b = 1;
-    while (a < this.deck.length) {
-      this.rows.push(new LearnRow(a));
-      var t = a + b;
-      a = b;
-      b = t;
-    }
-    this.rows.push(new LearnRow(a));
-
-    this.steps = this.deck.length * this.rows.length;
+    this.unseen = shuffled(cards);
+    this.active = []; // seen but not yet graduated
+    this.remaining = cards.length; // active + unseen
+    this.trial = 0;
+    this.lastCard = null;
+    this.misses = 0;
+    this.memory = new Map(); // card -> { s, askedAt, askedW }
   }
 
-  LearnState.prototype.firstRow = function () {
-    return this.rows[0];
+  LearnState.prototype.urgency = function (card) {
+    var m = this.memory.get(card);
+    return 1 - Math.pow(2, -(this.trial - m.askedAt) / m.s);
   };
 
-  LearnState.prototype.currentRow = function () {
-    return this.rows[this.row];
+  LearnState.prototype.deal = function (card) {
+    var m = this.memory.get(card);
+    if (m) {
+      m.askedW = this.urgency(card); // how forgotten it was when asked
+      m.askedAt = this.trial;
+    } else {
+      // A brand-new card is maximally unknown; a correct first answer means
+      // the teacher already knows this student, so let it fast-track out.
+      this.memory.set(card, { s: LEARN_START_S, askedAt: this.trial, askedW: 1 });
+      this.active.push(card);
+    }
+    this.trial++;
+    this.lastCard = card;
+    return card;
   };
 
   LearnState.prototype.next = function () {
-    // Emptied the deck and only one, not-overfull row remains: everything has
-    // been moved into a sufficiently large row, so we're done.
-    if (
-      this.deck.length === 0 &&
-      this.rows.length === 1 &&
-      !this.currentRow().isOverfull()
-    ) {
-      return null;
+    if (this.remaining === 0) return null;
+
+    // Never re-deal the card just answered unless it's all that's left.
+    var self = this;
+    var candidates = this.active.filter(function (c) {
+      return c !== self.lastCard;
+    });
+
+    var total = 0;
+    var maxW = 0;
+    var weights = candidates.map(function (c) {
+      var w = self.urgency(c);
+      total += w;
+      if (w > maxW) maxW = w;
+      return w;
+    });
+
+    if (this.unseen.length > 0 && maxW < LEARN_INTRODUCE_BELOW) {
+      return this.deal(this.unseen.pop());
+    }
+    if (candidates.length === 0) {
+      return this.deal(this.lastCard);
     }
 
-    // Mid-promotion, or a wrong answer just reset us to row 0: drain overfull.
-    if (this.currentRow().isOverfull()) {
-      return this.currentRow().next();
+    var r = Math.random() * total;
+    for (var i = 0; i < candidates.length; i++) {
+      r -= weights[i];
+      if (r < 0) return this.deal(candidates[i]);
     }
-
-    // Back at a non-overfull row 0: refill from the deck, or if the deck is
-    // empty promote the next row up to become the deck.
-    if (this.deck.length > 0) {
-      this.firstRow().add(this.deck.pop());
-    } else {
-      this.deck = this.rows.shift().cards;
-    }
-    return this.next();
+    return this.deal(candidates[candidates.length - 1]);
   };
 
   LearnState.prototype.correct = function (card) {
-    this.row++;
-    this.currentRow().add(card);
-    if (!this.currentRow().isOverfull()) {
-      this.row = 0;
+    var m = this.memory.get(card);
+    m.s *= 1 + LEARN_GROWTH * m.askedW;
+    // Achievable gaps are bounded by the number of other cards still in
+    // play, so the graduation bar tapers with them (but never below one
+    // survived doubling).
+    var bar = Math.min(
+      LEARN_GRADUATED_S,
+      Math.max(2 * LEARN_START_S, 2 * (this.remaining - 1)),
+    );
+    if (m.s >= bar) {
+      this.active.splice(this.active.indexOf(card), 1);
+      this.remaining--;
     }
   };
 
   LearnState.prototype.incorrect = function (card) {
-    // Send the missed card back to the bottom to be re-learned. Early in a run
-    // row 0 is a size-0 box, so pushing the card to the deck returns it there
-    // and it climbs again on its own -- leave that path unchanged.
-    if (this.firstRow().size === 0) {
-      this.row = 0;
-      this.deck.push(card);
-      return;
-    }
-    // Late in a run the small boxes have been shifted away (see next()), so
-    // row 0 is a large box. A card dropped there is buried and can ride a bulk
-    // promotion un-quizzed -- never seen again before the run ends. Rebuild a
-    // short [0, 1] bottom ladder and send the missed card back down it alongside
-    // a few random cards pulled from the bottom box. The size-0 box guarantees
-    // the missed card is re-asked; the size-1 box staggers the re-asks so it is
-    // spaced among that cohort before they all climb back to the big box.
-    var donor = this.firstRow();
-    var cohort = [card];
-    var companions = Math.min(3, donor.cards.length);
-    for (var i = 0; i < companions; i++) {
-      cohort.push(donor.cards.splice(Math.floor(Math.random() * donor.cards.length), 1)[0]);
-    }
-    this.rows.unshift(new LearnRow(1));
-    this.rows.unshift(new LearnRow(0));
-    this.row = 0;
-    var order = shuffled(cohort);
-    for (var j = 0; j < order.length; j++) {
-      this.deck.push(order[j]);
-    }
+    this.memory.get(card).s = LEARN_START_S;
+    this.misses++;
+  };
+
+  LearnState.prototype.doneMessage = function () {
+    return 'Done!' + (this.misses === 0 ? ' Perfect run!' : '');
   };
 </script>

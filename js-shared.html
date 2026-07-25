@@ -178,22 +178,39 @@
       return;
     }
 
+    runCarousel(
+      wrap,
+      students.map(function (s) {
+        return buildSharedCard(s, shared);
+      }),
+    );
+    preloadPhotos(
+      students.map(function (s) {
+        return s.fileId;
+      }),
+    );
+    container.appendChild(wrap);
+  }
+
+  // One-at-a-time card carousel: a counter and a stage appended to wrap, swipe
+  // left (next) / right (previous) on touch, arrow keys on a keyboard. Used by
+  // the mobile shared-with view and by browse mode. Returns a teardown that
+  // removes the document/window listeners — needed where the carousel is
+  // entered without a page load (browse, from the home grid).
+  function runCarousel(wrap, cards) {
     var counter = el('div', 'swipe-counter');
     wrap.appendChild(counter);
     var stage = el('div', 'swipe-stage');
     wrap.appendChild(stage);
 
-    var cards = students.map(function (s) {
-      return buildSharedCard(s, shared);
-    });
     var idx = 0;
 
     function show(i) {
-      idx = Math.max(0, Math.min(students.length - 1, i));
+      idx = Math.max(0, Math.min(cards.length - 1, i));
       var card = cards[idx];
       loadCardImage(card);
       stage.replaceChildren(card);
-      counter.textContent = idx + 1 + ' / ' + students.length;
+      counter.textContent = idx + 1 + ' / ' + cards.length;
     }
 
     var startX = null;
@@ -217,25 +234,26 @@
       startX = null;
       if (Math.abs(dx) > 40) show(dx < 0 ? idx + 1 : idx - 1);
     }
+    function onKey(e) {
+      if (e.key === 'ArrowRight') show(idx + 1);
+      else if (e.key === 'ArrowLeft') show(idx - 1);
+    }
     // Listen on the whole page (not just the card) so a swipe anywhere works.
     document.body.addEventListener('touchstart', onStart, { passive: true });
     document.addEventListener('touchmove', onMove, { passive: false });
     document.body.addEventListener('touchend', onEnd);
     document.body.addEventListener('touchcancel', onEnd);
-
-    // Arrow keys too (handy for testing on a desktop-sized window).
-    window.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight') show(idx + 1);
-      else if (e.key === 'ArrowLeft') show(idx - 1);
-    });
+    window.addEventListener('keydown', onKey);
 
     show(0);
-    preloadPhotos(
-      students.map(function (s) {
-        return s.fileId;
-      }),
-    );
-    container.appendChild(wrap);
+
+    return function () {
+      document.body.removeEventListener('touchstart', onStart);
+      document.removeEventListener('touchmove', onMove);
+      document.body.removeEventListener('touchend', onEnd);
+      document.body.removeEventListener('touchcancel', onEnd);
+      window.removeEventListener('keydown', onKey);
+    };
   }
 
   function buildSharedCard(s, shared) {

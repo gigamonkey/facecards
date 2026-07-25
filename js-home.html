@@ -57,53 +57,56 @@
     return div;
   }
 
-  // Render the browse view: every student in the scope as a photo + info row
-  // (the same layout as the shared-with table, whose CSS it reuses). Photos are
-  // deferred so browsers that block direct Drive thumbnails fall back to the
-  // proxy.
+  // Render the browse view: the scope's students one at a time like Learn and
+  // Review, but with the info always showing — swipe (or arrow keys) to move
+  // between students, like the shared-students carousel whose machinery and CSS
+  // it reuses. Returns the carousel's teardown (it hooks document-level
+  // listeners) for the controller to run on leaving the view.
   function renderBrowse(container, title, students) {
     container.innerHTML = '';
     var wrap = el('div');
     wrap.id = 'browse';
     wrap.appendChild(el('h1', null, title));
 
-    var table = el('table', 'shared-table');
-    var tbody = el('tbody');
-    var photoCells = [];
-    students
+    var cards = students
       .slice()
       .sort(function (a, b) {
         return String(a.firstName).localeCompare(String(b.firstName));
       })
-      .forEach(function (s) {
-        var tr = el('tr');
+      .map(buildBrowseCard);
 
-        var tdPhoto = el('td', 'photo');
-        if (s.fileId) {
-          tdPhoto.appendChild(loadingBox(s.fileId));
-          photoCells.push(tdPhoto);
-        } else {
-          tdPhoto.appendChild(el('div', 'initials', initials(s)));
-        }
-        tr.appendChild(tdPhoto);
-
-        var tdInfo = el('td', 'info');
-        tdInfo.appendChild(
-          el('p', 'name', s.nickname ? s.nickname + ' (' + s.firstName + ')' : s.firstName),
-        );
-        tdInfo.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
-        tdInfo.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
-        tdInfo.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
-        tdInfo.appendChild(el('p', null, String(s.studentNumber)));
-        tr.appendChild(tdInfo);
-
-        tbody.appendChild(tr);
-      });
-    table.appendChild(tbody);
-    wrap.appendChild(table);
+    var teardown = runCarousel(wrap, cards);
+    preloadPhotos(
+      students.map(function (s) {
+        return s.fileId;
+      }),
+    );
     container.appendChild(wrap);
+    return teardown;
+  }
 
-    loadCardImages(photoCells);
+  // A carousel card for browse: photo above the student's info (which, unlike a
+  // flashcard, is always visible).
+  function buildBrowseCard(s) {
+    var card = el('div', 'swipe-card');
+
+    if (!s.fileId) {
+      card.appendChild(el('div', 'initials', initials(s)));
+    } else {
+      card.appendChild(loadingBox(s.fileId)); // loaded direct-or-proxied when shown
+    }
+
+    var info = el('div', 'swipe-info');
+    info.appendChild(
+      el('p', 'name', s.nickname ? s.nickname + ' (' + s.firstName + ')' : s.firstName),
+    );
+    info.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
+    info.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
+    info.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
+    info.appendChild(el('p', null, String(s.studentNumber)));
+    card.appendChild(info);
+
+    return card;
   }
 
   function studyLink(text, handler) {

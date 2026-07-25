@@ -104,10 +104,11 @@
         return;
       }
 
-      // Browse: no flashcard session, just the photo + info list.
+      // Browse: the same one-at-a-time cards, but with the info always showing
+      // and swipe/arrow navigation instead of a flashcard session.
       if (mode === 'browse') {
         setView('browse');
-        renderBrowse(app, titleFor(mode, scope, id), students);
+        teardownStudy = renderBrowse(app, titleFor(mode, scope, id), students);
         window.scrollTo(0, 0);
         return;
       }

@@ -269,9 +269,8 @@
     cursor: pointer;
   }
 
-  /* ---- Shared-with table view (also browse, which reuses its layout) ---- */
-  body.view-shared,
-  body.view-browse {
+  /* ---- Shared-with table view ---- */
+  body.view-shared {
     width: 90%;
     margin: calc(var(--nav-h) + 1em) auto;
     padding: 2em 2em 5em;
@@ -287,8 +286,7 @@
     font-size: 0.95em;
     color: #445;
   }
-  #shared h1,
-  #browse h1 {
+  #shared h1 {
     margin: 0.25em 0 0.75em;
   }
   .shared-table {
@@ -341,8 +339,9 @@
     font-size: 0.55em;
   }
 
-  /* ---- Mobile shared: one-at-a-time swipe viewer ---- */
-  body.view-shared-swipe {
+  /* ---- One-at-a-time swipe viewer (mobile shared-with, and browse) ---- */
+  body.view-shared-swipe,
+  body.view-browse {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -352,7 +351,8 @@
     box-sizing: border-box;
     text-align: center;
   }
-  #shared-swipe {
+  #shared-swipe,
+  #browse {
     width: 100%;
     max-width: 30em;
   }
@@ -360,7 +360,8 @@
     display: block;
     text-align: left;
   }
-  #shared-swipe h1 {
+  #shared-swipe h1,
+  #browse h1 {
     margin: 0.25em 0;
     font-size: 1.2em;
   }
@@ -505,11 +506,6 @@
     }
     body.view-study {
       padding-bottom: 0;
-    }
-    body.view-browse {
-      width: 100vw;
-      margin: calc(var(--nav-h) + 1vh) auto 5vh;
-      padding: 1em;
     }
   }
 </style>

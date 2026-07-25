@@ -67,6 +67,13 @@
         );
         home.appendChild(head);
 
+        // A big list's grid would dwarf the classes above it — past 35
+        // students just say how many (the study modes still work on it).
+        if (list.students.length > 35) {
+          home.appendChild(el('p', 'list-count', list.students.length + ' students'));
+          return;
+        }
+
         var faces = el('div', 'faces');
         list.students
           .slice()

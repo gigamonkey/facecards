@@ -24,6 +24,7 @@
   // get real gaps instead of being drilled back-to-back -- and missing a
   // spacer un-graduates it. The session ends when every card has graduated.
 
+  // The knobs below are documented in TUNING.md.
   var LEARN_START_S = 1; // stability of a new or just-missed card
   var LEARN_GROWTH = 3; // stability multiplier is 1 + this * (1 - R)
   var LEARN_GRADUATED_S = 16; // stability at which a card leaves the session

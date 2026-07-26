@@ -950,12 +950,18 @@ function buildData() {
     var period = String(s.period);
 
     if (!students[num]) {
+      // A nickname that just repeats the first name is roster noise, not a
+      // real nickname -- treat the student as having none.
+      var nickname = String(s.nickname || '').trim();
+      if (nickname.toLowerCase() === String(s.firstName || '').trim().toLowerCase()) {
+        nickname = '';
+      }
       students[num] = {
         studentNumber: num,
         firstName: s.firstName,
         middleName: s.middleName,
         lastName: s.lastName,
-        nickname: s.nickname,
+        nickname: nickname,
         grade: s.grade,
         gender: s.gender,
         fileId: photos[num] || '',

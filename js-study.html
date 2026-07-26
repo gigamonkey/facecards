@@ -3,14 +3,23 @@
   // from public/js/learn.js and public/js/review.js). First input reveals the
   // card back; when the back is showing, left = wrong, right = correct.
   // Advances via arrow keys or touch swipes. Returns a teardown() that removes
-  // the listeners so leaving study mode doesn't hijack the home view.
-  function runStudy(state, currentEl) {
+  // the listeners so leaving study mode doesn't hijack the home view. onRedo,
+  // if given, gets a Redo button on the done screen that restarts the session.
+  function runStudy(state, currentEl, onRedo) {
     var current = null;
 
     function advance() {
       current = state.next();
       if (current === null) {
-        currentEl.textContent = state.doneMessage ? state.doneMessage() : 'Done!';
+        var done = el('div', 'study-done');
+        done.appendChild(el('p', null, state.doneMessage ? state.doneMessage() : 'Done!'));
+        if (onRedo) {
+          var redo = el('button', null, 'Redo');
+          redo.type = 'button';
+          redo.addEventListener('click', onRedo);
+          done.appendChild(redo);
+        }
+        currentEl.replaceChildren(done);
       } else {
         loadCardImage(current); // fetch this card's photo only now that it's shown
         currentEl.replaceChildren(current);

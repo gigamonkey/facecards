@@ -148,7 +148,9 @@
           : mode === 'classic'
             ? new LeitnerState(cards)
             : new ReviewState(cards);
-      teardownStudy = runStudy(state, current);
+      teardownStudy = runStudy(state, current, function () {
+        showStudy(mode, scope, id); // same set, same mode, fresh state
+      });
       preloadPhotos(
         students.map(function (s) {
           return s.fileId;

@@ -48,7 +48,8 @@
     back.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
     back.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
     if (!opts.hideClass) {
-      back.appendChild(el('p', null, (s.course || '') + ' - Period ' + (s.period || '')));
+      var period = 'Period ' + (s.period || '');
+      back.appendChild(el('p', null, s.course ? s.course + ' - ' + period : period));
     }
     // Custom-list students can carry extra lines (the spare TSV columns).
     (s.extra || []).forEach(function (line) {

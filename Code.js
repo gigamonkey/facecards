@@ -149,7 +149,7 @@ function buildModelUncached(email) {
         teacherLast: teacher.last,
         students: sec.students.map(function (num) {
           var o = studentBase(data, num);
-          o.course = name;
+          o.course = sec.courses.join(' / '); // just the course; the card adds "Period N"
           o.period = period;
           o.schedule = scheduleFor(data, num); // full schedule, for browse mode
           return o;

@@ -45,6 +45,15 @@
 
     home.appendChild(classHead('BHS staff', onStudy, 'staff', ''));
 
+    // Everyone gets the link; the edit page itself explains if the viewer has
+    // no directory entry to edit.
+    var editLink = el('p', 'staff-edit-link');
+    var edit = el('a', null, 'Edit my entry');
+    edit.href = appUrl('?staff-edit');
+    if ((window.CTX || {}).baseUrl) edit.target = '_top';
+    editLink.appendChild(edit);
+    home.appendChild(editLink);
+
     var filter = el('input', 'staff-filter');
     filter.type = 'search';
     filter.placeholder = 'Filter by name or role';
@@ -148,5 +157,132 @@
       }),
       DIRECT_POOL,
     );
+  }
+
+  // The self-edit form (?staff-edit): correct your own directory entry. Saves
+  // to the `staff overrides` tab via google.script.run, so a directory
+  // re-scrape doesn't undo the fix. Photo editing is deliberately absent for
+  // now. The viewer's entry is found by ctx.effective, so an admin editing
+  // via ?as= sees and edits the impersonated person's entry.
+  function renderStaffEdit(container) {
+    container.innerHTML = '';
+    var ctx = window.CTX || {};
+    var wrap = el('div');
+    wrap.id = 'staff-edit';
+
+    var backLink = el('a', 'home-link', '← All staff');
+    backLink.href = appUrl('?staff');
+    if (ctx.baseUrl) backLink.target = '_top';
+    wrap.appendChild(backLink);
+
+    wrap.appendChild(el('h1', null, 'My staff entry'));
+
+    var entry = myStaffEntry();
+    if (!entry) {
+      wrap.appendChild(
+        el(
+          'p',
+          null,
+          'No staff directory entry found for ' +
+            staffUsername(ctx.effective || '') +
+            '. Entries come from the BHS staff directory — contact Mr. Seibel if yours is missing.',
+        ),
+      );
+      container.appendChild(wrap);
+      return;
+    }
+
+    wrap.appendChild(staffPhoto(entry));
+    wrap.appendChild(el('p', 'hint', 'Photo changes are coming later.'));
+
+    var form = el('form');
+    var firstName = editField(form, 'First name', entry.firstName, true);
+    var lastName = editField(form, 'Last name', entry.lastName, true);
+    var role = editField(form, 'Role', entry.role, false);
+
+    var save = el('button', null, 'Save');
+    save.type = 'submit';
+    form.appendChild(save);
+    wrap.appendChild(form);
+
+    var status = el('p', 'staff-status');
+    wrap.appendChild(status);
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      save.disabled = true;
+      status.textContent = 'Saving…';
+      google.script.run
+        .withSuccessHandler(function () {
+          // Land on the staff grid so the change is visible right away.
+          if (ctx.baseUrl) window.top.location.href = appUrl('?staff');
+          else location.reload();
+        })
+        .withFailureHandler(function (err) {
+          save.disabled = false;
+          status.textContent = err.message;
+        })
+        .saveStaffOverride(
+          { firstName: firstName.value, lastName: lastName.value, role: role.value },
+          asParam(),
+        );
+    });
+
+    // An override exists — offer the way back to the plain directory values.
+    if (entry.overridden) {
+      var reset = el('button', 'staff-reset', 'Reset to directory values');
+      reset.type = 'button';
+      reset.addEventListener('click', function () {
+        if (!confirm('Discard your edits and go back to the directory values?')) return;
+        status.textContent = 'Resetting…';
+        google.script.run
+          .withSuccessHandler(function () {
+            // Reload the form to show the reverted values.
+            if (ctx.baseUrl) window.top.location.href = appUrl('?staff-edit');
+            else location.reload();
+          })
+          .withFailureHandler(function (err) {
+            status.textContent = err.message;
+          })
+          .deleteStaffOverride(asParam());
+      });
+      wrap.appendChild(reset);
+    }
+
+    wrap.appendChild(
+      el(
+        'p',
+        'hint',
+        'Your changes are stored separately from the directory, so they survive ' +
+          'directory refreshes. Editing the entry for ' +
+          staffUsername(ctx.effective || '') +
+          '.',
+      ),
+    );
+
+    container.appendChild(wrap);
+  }
+
+  // A labeled text input appended to the form; returns the input.
+  function editField(form, label, value, required) {
+    var wrap = el('label', null, label);
+    var input = el('input');
+    input.type = 'text';
+    input.value = value || '';
+    input.required = !!required;
+    wrap.appendChild(input);
+    form.appendChild(wrap);
+    return input;
+  }
+
+  // The viewer's own row in the staff model (matched by ctx.effective, which
+  // the server normalizes to lowercase, as are the scraped emails).
+  function myStaffEntry() {
+    var me = String((window.CTX || {}).effective || '').toLowerCase();
+    var match = null;
+    staffList().forEach(function (p) {
+      if (!match && String(p.email || '').toLowerCase() === me) match = p;
+    });
+    return match;
   }
 </script>

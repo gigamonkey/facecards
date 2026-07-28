@@ -46,6 +46,13 @@
       window.scrollTo(0, 0);
     }
 
+    function showStaffEdit() {
+      clearStudy();
+      setView('staff-edit');
+      renderStaffEdit(app);
+      window.scrollTo(0, 0);
+    }
+
     // The default landing view: two boxes linking to the grids (?learn) and the
     // shared overview (?shared).
     function showMenu() {
@@ -280,7 +287,8 @@
         'other teachers.</p>' +
         '<p><strong>Staff</strong> is the BHS staff directory — learn or browse your ' +
         'colleagues’ faces the same way, with a filter to study just one department ' +
-        'or role.</p>' +
+        'or role. If your own listing is wrong, “Edit my entry” on the Staff page ' +
+        'fixes it.</p>' +
         '<h2>On the Mine page</h2>' +
         '<h3>Learn and Review</h3>' +
         '<p>' +
@@ -332,6 +340,8 @@
       window.scrollTo(0, 0);
     } else if (ROUTE.mode === 'staff') {
       showStaff();
+    } else if (ROUTE.mode === 'staff-edit') {
+      showStaffEdit();
     } else if (
       ROUTE.mode === 'learn' ||
       ROUTE.mode === 'review' ||

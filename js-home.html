@@ -62,7 +62,7 @@
               .withFailureHandler(function (err) {
                 alert(err.message);
               })
-              .deleteList(list.name, listAsParam());
+              .deleteList(list.name, asParam());
           }),
         );
         home.appendChild(head);
@@ -161,7 +161,7 @@
           save.disabled = false;
           status.textContent = err.message;
         })
-        .saveList(listName, text, listAsParam());
+        .saveList(listName, text, asParam());
     }
 
     form.addEventListener('submit', function (e) {
@@ -187,9 +187,10 @@
     return wrap;
   }
 
-  // The ?as= to pass to the list endpoints so an admin's edits land under the
-  // impersonated teacher (the server re-checks admin-ness).
-  function listAsParam() {
+  // The ?as= to pass to the write endpoints (lists, staff overrides) so an
+  // admin's edits land under the impersonated user (the server re-checks
+  // admin-ness).
+  function asParam() {
     var ctx = window.CTX || {};
     return ctx.impersonating ? ctx.effective : '';
   }

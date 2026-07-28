@@ -69,7 +69,8 @@ and the `*.html` files are pushed.
    also carries their full cross-teacher `schedule` (for browse mode).
 4. Routes by query param: `?shared-with=<teacher>` (students shared with that
    teacher), `?shared` (overview of all sharing teachers), `?staff` (the
-   scraped BHS staff directory — same for every viewer),
+   scraped BHS staff directory — same for every viewer), `?staff-edit` (a form
+   for correcting one's own staff entry),
    `?mode=learn|review|browse[&scope=&id=]` (study/browse deep link; `scope=staff`
    studies the staff directory), `?learn` (the class face grids), default
    (two-box menu). A model with no classes renders `landing.html` ("contact
@@ -103,6 +104,11 @@ scans `CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files, writes the
   `lastName, firstName, role, email, photoUrl` rows. Photos are not
   downloaded; `photoUrl` is the page's own public image URL ('' for the
   placeholder image, rendered as initials).
+- `staff overrides` — staff members' corrections to their own entries
+  (`email`, `firstName`, `lastName`, `role`), written by `saveStaffOverride()`
+  from the `?staff-edit` form. Merged over the scraped rows in
+  `buildStaffModel()` (non-empty cell wins, per field), so a directory
+  re-scrape never clobbers an edit.
 
 **Client.** `index.html` bootstraps `window.MODEL/ROUTE/CTX/SHARED` then
 includes, in order: `js-dom` (`$`, `$$`, `el`, `appUrl`, `helpOpen`) →
@@ -116,7 +122,8 @@ pass if nothing is missed) → `js-home` (`renderHome` face grids + card flip,
 showing) → `js-shared` (shared-students views: desktop table + overview,
 mobile list + swipe carousel; `runCarousel`, reused by browse) → `js-staff`
 (the staff directory: filterable face grid, staff flash/browse cards — plain
-`<img>`s to the public photo URLs, no Drive proxy machinery) → `js-app`
+`<img>`s to the public photo URLs, no Drive proxy machinery — and the
+`?staff-edit` self-edit form) → `js-app`
 (controller: view dispatch, deep links, the navbar — Home / Mine / Shared /
 Staff, admin view-as form and impersonation banner — and the help overlay).
 

@@ -201,6 +201,66 @@
     object-fit: cover;
   }
 
+  /* ---- Staff self-edit view ---- */
+  body.view-staff-edit {
+    width: 90%;
+    max-width: 26em;
+    margin: calc(var(--nav-h) + 1em) auto;
+    padding: 2em;
+    background: #eeeefa;
+    border-radius: 12px;
+  }
+  #staff-edit h1 {
+    margin: 0.3em 0 0.5em;
+  }
+  #staff-edit img.staff-photo {
+    width: 172px;
+  }
+  #staff-edit .hint {
+    margin: 0.3em 0 0.8em;
+    font-size: 0.95em;
+    color: #445;
+  }
+  #staff-edit form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6em;
+    align-items: flex-start;
+    margin-top: 0.5em;
+  }
+  #staff-edit label {
+    width: 100%;
+    font-size: 0.95em;
+    color: #445;
+  }
+  #staff-edit input {
+    display: block;
+    font: inherit;
+    color: #000;
+    padding: 4px 6px;
+    width: 100%;
+    margin-top: 2px;
+  }
+  #staff-edit button {
+    font: inherit;
+    padding: 4px 12px;
+    border: 1px solid grey;
+    border-radius: 6px;
+    background: #ddf;
+    cursor: pointer;
+  }
+  #staff-edit .staff-reset {
+    margin-top: 1em;
+    background: #eee;
+  }
+  .staff-status {
+    margin-top: 0.5em;
+    color: #a00;
+  }
+  .staff-edit-link {
+    margin: 0.2em 0 0;
+  }
+
   /* Stand-in for a custom list's face grid when the list is too big to show. */
   .list-count {
     margin: 0.2em 0 0.5em;

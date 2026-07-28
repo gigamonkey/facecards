@@ -62,6 +62,10 @@ because the app reads it _as_ that account.
 - **`staff` tab.** Also generated, not hand-made — `refreshStaffDirectory`
   scrapes the public BHS staff directory into it (see §7). Until it has run,
   the Staff section just shows a "no staff data yet" note.
+- **`staff overrides` tab.** Created on the first save from the app's "Edit my
+  entry" form — staff members' corrections to their own directory entries.
+  Kept separate from the `staff` tab so re-running `refreshStaffDirectory`
+  never clobbers anyone's edits.
 
 ### Photos folder
 
@@ -149,7 +153,8 @@ Open the `…/exec` URL and check:
   <https://bhs.berkeleyschools.net/staff/> into the `staff` tab and clears the
   caches. If it throws "did the page layout change?", the page's table markup
   no longer matches the parser — fix `parseStaffDirectory` before re-running
-  (the tab is left untouched on failure).
+  (the tab is left untouched on failure). Staff self-edits live in the
+  separate `staff overrides` tab and survive the re-scrape.
 - **Keep it fast (recommended):** add a time-driven trigger for `warmData` so the
   expensive roster rebuild happens in the background, not on a user's page load.
   In the editor: **Triggers** (clock icon) → **Add Trigger** → function

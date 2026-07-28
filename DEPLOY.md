@@ -59,6 +59,9 @@ because the app reads it _as_ that account.
   admins.
 - **`photos` tab.** You don't create this by hand — `refreshPhotoMap` generates
   it in §5.
+- **`staff` tab.** Also generated, not hand-made — `refreshStaffDirectory`
+  scrapes the public BHS staff directory into it (see §7). Until it has run,
+  the Staff section just shows a "no staff data yet" note.
 
 ### Photos folder
 
@@ -141,6 +144,12 @@ Open the `…/exec` URL and check:
 - **Edited the roster or `admins` tab:** run `clearCaches` from the editor so the
   change appears right away. (Data is cached for up to 6 hours, so without this
   the edit still takes effect within that window on its own.)
+- **Staff directory changed** (start of each year at minimum): run
+  `refreshStaffDirectory` from the editor. It re-scrapes
+  <https://bhs.berkeleyschools.net/staff/> into the `staff` tab and clears the
+  caches. If it throws "did the page layout change?", the page's table markup
+  no longer matches the parser — fix `parseStaffDirectory` before re-running
+  (the tab is left untouched on failure).
 - **Keep it fast (recommended):** add a time-driven trigger for `warmData` so the
   expensive roster rebuild happens in the background, not on a user's page load.
   In the editor: **Triggers** (clock icon) → **Add Trigger** → function
@@ -158,8 +167,10 @@ Open the `…/exec` URL and check:
   same Workspace as the deployer; if it comes back empty, confirm you deployed
   from the `berkeley.net` account and that testers are on `@berkeley.net`.
 - **Authorization / scope errors.** The requested scopes are pinned in
-  `appsscript.json` (`oauthScopes`: Sheets, Drive read-only, userinfo.email). If
-  a scope is rejected or missing, adjust that list, `hug push`, and re-authorize.
+  `appsscript.json` (`oauthScopes`: Sheets, Drive read-only, userinfo.email,
+  external requests — the last for `refreshStaffDirectory`'s fetch of the staff
+  directory page). If a scope is rejected or missing, adjust that list,
+  `hug push`, and re-authorize.
 - **Photos are blank.** Check the folder is shared view-only with the domain,
   filenames are exactly `<studentNumber>.jpg`, and `refreshPhotoMap` has run and
   filled the `photos` tab.

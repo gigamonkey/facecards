@@ -1,0 +1,152 @@
+<script>
+  // Staff directory view: the scraped BHS staff (window.STAFF) as a filterable
+  // face grid with Learn / Review / Browse over whatever the filter matches,
+  // plus the staff flavors of the flashcard and browse card. Staff photos are
+  // public bhs.berkeleyschools.net URLs, so cards use plain <img>s — none of
+  // the Drive direct-vs-proxy machinery (no Google cookies involved, so they
+  // load everywhere, mobile Safari included).
+
+  // The current filter query. Module-global so leaving for a study session and
+  // coming back keeps the filter, and so js-app's studentsFor/titleFor can
+  // scope study to the filtered set.
+  var staffFilterQuery = '';
+
+  function staffList() {
+    return (window.STAFF && window.STAFF.staff) || [];
+  }
+
+  // The staff matching the current filter: case-insensitive substring match on
+  // name and role ("math", "sped", "safety", …). This is what makes study
+  // usable — the full directory is far too many cards for one Learn session.
+  function staffMatches() {
+    var q = staffFilterQuery.trim().toLowerCase();
+    return staffList().filter(function (p) {
+      return !q || staffSearchText(p).indexOf(q) !== -1;
+    });
+  }
+
+  function staffSearchText(p) {
+    return (p.firstName + ' ' + p.lastName + ' ' + p.role).toLowerCase();
+  }
+
+  function renderStaff(container, onStudy) {
+    container.innerHTML = '';
+    var home = el('div');
+    home.id = 'home'; // reuse the home-view grid layout and CSS
+
+    if (!staffList().length) {
+      home.appendChild(el('h1', 'teacher-name', 'BHS staff'));
+      home.appendChild(
+        el('p', null, 'No staff data yet — run refreshStaffDirectory() from the Apps Script editor.'),
+      );
+      container.appendChild(home);
+      return;
+    }
+
+    home.appendChild(classHead('BHS staff', onStudy, 'staff', ''));
+
+    var filter = el('input', 'staff-filter');
+    filter.type = 'search';
+    filter.placeholder = 'Filter by name or role';
+    filter.setAttribute('aria-label', 'Filter staff by name or role');
+    filter.value = staffFilterQuery;
+    home.appendChild(filter);
+
+    var count = el('p', 'staff-count');
+    home.appendChild(count);
+
+    // Build every card once; filtering just toggles visibility.
+    var faces = el('div', 'faces');
+    var cards = staffList().map(function (p) {
+      var card = buildStaffCard(p);
+      attachFlip(card);
+      faces.appendChild(card);
+      return card;
+    });
+    home.appendChild(faces);
+
+    function applyFilter() {
+      staffFilterQuery = filter.value;
+      var q = staffFilterQuery.trim().toLowerCase();
+      var matched = 0;
+      staffList().forEach(function (p, i) {
+        var show = !q || staffSearchText(p).indexOf(q) !== -1;
+        cards[i].style.display = show ? '' : 'none';
+        if (show) matched++;
+      });
+      count.textContent = matched + ' of ' + staffList().length;
+    }
+    filter.addEventListener('input', applyFilter);
+    applyFilter();
+
+    container.appendChild(home);
+  }
+
+  // A staff flashcard (grid and study modes): photo or initials front; first
+  // name, full name, role, and username on the back.
+  function buildStaffCard(p) {
+    var card = el('div', 'card');
+    card.appendChild(staffPhoto(p));
+
+    var back = el('div', 'back');
+    back.appendChild(el('p', 'name', p.firstName));
+    back.appendChild(el('p', null, (p.firstName || '') + ' ' + (p.lastName || '')));
+    if (p.role) back.appendChild(el('p', null, p.role));
+    if (p.email) back.appendChild(el('p', null, staffUsername(p.email)));
+    card.appendChild(back);
+
+    return card;
+  }
+
+  // The photo (or initials box) for a staff card. Empty alt so a broken image
+  // can't leak the name mid-study; the name is on the card anyway.
+  function staffPhoto(p) {
+    if (!p.photoUrl) return el('div', 'initials', initials(p));
+    var img = el('img', 'staff-photo');
+    img.alt = '';
+    img.loading = 'lazy';
+    img.src = p.photoUrl;
+    return img;
+  }
+
+  function staffUsername(email) {
+    return String(email).replace(/@berkeley\.net$/, '');
+  }
+
+  // Browse for staff: the same one-at-a-time carousel as student browse, with
+  // everything visible. Model order (last name) — no re-sort, unlike students,
+  // who browse by displayed first name.
+  function renderStaffBrowse(container, title, staff) {
+    container.innerHTML = '';
+    var wrap = el('div');
+    wrap.id = 'browse';
+    wrap.appendChild(el('h1', null, title));
+
+    var teardown = runCarousel(wrap, staff.map(buildStaffBrowseCard));
+    preloadStaffPhotos(staff);
+    container.appendChild(wrap);
+    return teardown;
+  }
+
+  function buildStaffBrowseCard(p) {
+    var card = el('div', 'swipe-card');
+    card.appendChild(staffPhoto(p));
+
+    var info = el('div', 'swipe-info');
+    info.appendChild(el('p', 'name', (p.firstName || '') + ' ' + (p.lastName || '')));
+    if (p.role) info.appendChild(el('p', null, p.role));
+    if (p.email) info.appendChild(el('p', null, staffUsername(p.email)));
+    card.appendChild(info);
+
+    return card;
+  }
+
+  function preloadStaffPhotos(staff) {
+    warmUrls(
+      staff.map(function (p) {
+        return p.photoUrl;
+      }),
+      DIRECT_POOL,
+    );
+  }
+</script>

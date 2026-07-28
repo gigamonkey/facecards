@@ -180,6 +180,27 @@
     cursor: pointer;
   }
 
+  /* ---- Staff view (reuses the home grid) ---- */
+  .staff-filter {
+    font: inherit;
+    padding: 4px 8px;
+    width: 100%;
+    max-width: 20em;
+    margin: 0.5em 0 0.2em;
+  }
+  .staff-count {
+    margin: 0 0 0.5em;
+    font-size: 0.95em;
+    color: #445;
+  }
+  /* Directory photos vary in size and aspect ratio; crop them to the 3:4
+     shape the student portraits (and the initials box) have, so the grids
+     and cards stay regular. */
+  img.staff-photo {
+    aspect-ratio: 3 / 4;
+    object-fit: cover;
+  }
+
   /* Stand-in for a custom list's face grid when the list is too big to show. */
   .list-count {
     margin: 0.2em 0 0.5em;

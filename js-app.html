@@ -39,6 +39,13 @@
       window.scrollTo(0, 0);
     }
 
+    function showStaff() {
+      clearStudy();
+      setView('home'); // the staff grid reuses the home-view styling
+      renderStaff(app, showStudy);
+      window.scrollTo(0, 0);
+    }
+
     // The default landing view: two boxes linking to the grids (?learn) and the
     // shared overview (?shared).
     function showMenu() {
@@ -51,6 +58,7 @@
       var boxes = el('div', 'menu-boxes');
       boxes.appendChild(menuBox('Learn students’ names', '?learn'));
       boxes.appendChild(menuBox('See shared students', '?shared'));
+      boxes.appendChild(menuBox('Learn staff names', '?staff'));
       menu.appendChild(boxes);
 
       // QR code to the app URL, so it's easy to open on a phone without typing
@@ -79,6 +87,9 @@
     }
 
     function studentsFor(scope, id) {
+      if (scope === 'staff') {
+        return staffMatches(); // the staff view's filter narrows study too
+      }
       if (scope === 'class' && MODEL.classes[id]) {
         return MODEL.classes[id].students.slice();
       }
@@ -93,6 +104,10 @@
     }
 
     function titleFor(mode, scope, id) {
+      if (scope === 'staff') {
+        var q = staffFilterQuery.trim();
+        return q ? 'Staff matching “' + q + '”' : 'BHS staff';
+      }
       if (scope === 'class' && MODEL.classes[id]) {
         return MODEL.classes[id].name;
       }
@@ -106,7 +121,8 @@
       clearStudy();
       var students = studentsFor(scope, id);
       if (!students.length) {
-        showHome(); // deep link to a class the viewer doesn't teach, etc.
+        if (scope === 'staff') showStaff(); // the filter matched nobody
+        else showHome(); // deep link to a class the viewer doesn't teach, etc.
         return;
       }
 
@@ -114,7 +130,10 @@
       // and swipe/arrow navigation instead of a flashcard session.
       if (mode === 'browse') {
         setView('browse');
-        teardownStudy = renderBrowse(app, titleFor(mode, scope, id), students);
+        teardownStudy =
+          scope === 'staff'
+            ? renderStaffBrowse(app, titleFor(mode, scope, id), students)
+            : renderBrowse(app, titleFor(mode, scope, id), students);
         window.scrollTo(0, 0);
         return;
       }
@@ -133,6 +152,7 @@
       app.appendChild(current);
 
       var cards = students.map(function (s) {
+        if (scope === 'staff') return buildStaffCard(s);
         // hideClass: list students have no single course/period of the viewer's.
         return buildCard(s, {
           showNumber: false,
@@ -146,11 +166,15 @@
       teardownStudy = runStudy(state, current, function () {
         showStudy(mode, scope, id); // same set, same mode, fresh state
       });
-      preloadPhotos(
-        students.map(function (s) {
-          return s.fileId;
-        }),
-      );
+      if (scope === 'staff') {
+        preloadStaffPhotos(students);
+      } else {
+        preloadPhotos(
+          students.map(function (s) {
+            return s.fileId;
+          }),
+        );
+      }
       window.scrollTo(0, 0);
     }
 
@@ -165,6 +189,7 @@
       nav.appendChild(navLink('Home', appUrl('')));
       nav.appendChild(navLink('Mine', appUrl('?learn')));
       nav.appendChild(navLink('Shared', appUrl('?shared')));
+      nav.appendChild(navLink('Staff', appUrl('?staff')));
       banner.appendChild(nav);
 
       var help = el('button', 'nav-help', '?');
@@ -253,6 +278,9 @@
         '<p><strong>Mine</strong> is for learning and browsing your own students</p>' +
         '<p><strong>Shared</strong> shows you the students you share with each of the ' +
         'other teachers.</p>' +
+        '<p><strong>Staff</strong> is the BHS staff directory — learn or browse your ' +
+        'colleagues’ faces the same way, with a filter to study just one department ' +
+        'or role.</p>' +
         '<h2>On the Mine page</h2>' +
         '<h3>Learn and Review</h3>' +
         '<p>' +
@@ -302,6 +330,8 @@
         renderSharedOverview(app, window.SHARED);
       }
       window.scrollTo(0, 0);
+    } else if (ROUTE.mode === 'staff') {
+      showStaff();
     } else if (
       ROUTE.mode === 'learn' ||
       ROUTE.mode === 'review' ||

@@ -586,7 +586,7 @@ function getPhoto(fileId) {
  * (start of each year at minimum).
  */
 function refreshStaffDirectory() {
-  var html = UrlFetchApp.fetch(STAFF_DIRECTORY_URL).getContentText();
+  var html = fetchStaffPage();
   var rows = parseStaffDirectory(html);
   // The directory has ~300 rows; far fewer parsed means the page changed
   // shape, and overwriting the tab would silently empty the Staff section.
@@ -608,6 +608,33 @@ function refreshStaffDirectory() {
   Logger.log('Wrote ' + rows.length + ' staff rows to the "' + STAFF_SHEET + '" tab.');
 
   clearCaches(); // the new directory should show up immediately
+}
+
+/**
+ * Fetch the staff directory page, retrying with backoff. The school site's
+ * firewall intermittently 403s requests from Google's shared fetch servers
+ * (IP reputation — the same request from a normal machine succeeds, and
+ * UrlFetchApp's User-Agent can't be changed, so looking more like a browser
+ * isn't an option). Each attempt can leave from a different address in
+ * Google's pool, so retrying often gets through; when it doesn't, the local
+ * fallback is scripts/scrape-staff.mjs (see DEPLOY.md).
+ */
+function fetchStaffPage() {
+  var wait = 1000;
+  for (var attempt = 1; ; attempt++) {
+    var resp = UrlFetchApp.fetch(STAFF_DIRECTORY_URL, { muteHttpExceptions: true });
+    var code = resp.getResponseCode();
+    if (code === 200) return resp.getContentText();
+    if (attempt >= 4) {
+      throw new Error(
+        'The staff directory returned HTTP ' + code + ' on ' + attempt + ' attempts — ' +
+          "the site's firewall is probably blocking Google's servers right now. Try again " +
+          'in a while, or scrape locally with scripts/scrape-staff.mjs (see DEPLOY.md).',
+      );
+    }
+    Utilities.sleep(wait);
+    wait *= 2;
+  }
 }
 
 /**

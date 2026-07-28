@@ -181,6 +181,18 @@ Open the `…/exec` URL and check:
   filled the `photos` tab.
 - **A teacher sees no sections.** Their login must exactly match a `teacherEmail`
   value in the student tab (case/whitespace are normalized, the address is not).
+- **`refreshStaffDirectory` fails with HTTP 403.** The school site's firewall
+  intermittently blocks fetches from Google's shared servers by IP reputation
+  (the User-Agent can't be changed from Apps Script). The function already
+  retries with backoff; if it still fails, wait a while and re-run — or scrape
+  from your own machine, which the site trusts:
+
+  ```bash
+  node scripts/scrape-staff.mjs > staff.tsv
+  ```
+
+  Then clear out the `staff` tab, paste `staff.tsv`'s contents at cell A1, and
+  run `clearCaches` from the editor.
 
 ## Optional: a staging copy
 

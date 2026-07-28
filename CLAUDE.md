@@ -103,7 +103,9 @@ scans `CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files, writes the
   bhs.berkeleyschools.net/staff/ — one TablePress table — into
   `lastName, firstName, role, email, photoUrl` rows. Photos are not
   downloaded; `photoUrl` is the page's own public image URL ('' for the
-  placeholder image, rendered as initials).
+  placeholder image, rendered as initials). The site's firewall sometimes
+  403s Google's fetch servers; `scripts/scrape-staff.mjs` scrapes locally to
+  TSV as a fallback (see DEPLOY.md).
 - `staff overrides` — staff members' corrections to their own entries
   (`email`, `firstName`, `lastName`, `role`), written by `saveStaffOverride()`
   from the `?staff-edit` form. Merged over the scraped rows in

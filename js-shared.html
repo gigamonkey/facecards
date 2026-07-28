@@ -14,7 +14,8 @@
       return;
     }
 
-    wrap.appendChild(el('h1', null, 'Shared with ' + (shared.otherLast || shared.otherFull)));
+    var title = [shared.meLast, shared.otherLast].filter(Boolean).join(' / ');
+    wrap.appendChild(el('h1', null, title + ' shared students'));
 
     if (!shared.students.length) {
       wrap.appendChild(el('p', null, 'No shared students.'));
@@ -88,7 +89,7 @@
 
     var baseUrl = (window.CTX && CTX.baseUrl) || '';
 
-    wrap.appendChild(el('h1', null, 'Shared students'));
+    wrap.appendChild(el('h1', null, 'Shared with …'));
 
     if (!data || !data.teachers.length) {
       wrap.appendChild(el('p', null, 'You don’t share any students with another teacher.'));
@@ -173,7 +174,7 @@
     }
 
     wrap.appendChild(
-      el('h1', null, 'Shared with ' + (shared.otherLast || shared.otherFull)),
+      el('h1', null, [shared.meLast, shared.otherLast].filter(Boolean).join(' / ')),
     );
 
     var students = shared.students || [];

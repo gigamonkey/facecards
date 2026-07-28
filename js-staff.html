@@ -26,7 +26,9 @@
   }
 
   function staffSearchText(p) {
-    return (p.firstName + ' ' + p.lastName + ' ' + p.role).toLowerCase();
+    return (
+      p.firstName + ' ' + p.lastName + ' ' + p.role + ' ' + (p.courses || []).join(' ')
+    ).toLowerCase();
   }
 
   function renderStaff(container, onStudy) {
@@ -56,8 +58,8 @@
 
     var filter = el('input', 'staff-filter');
     filter.type = 'search';
-    filter.placeholder = 'Filter by name or role';
-    filter.setAttribute('aria-label', 'Filter staff by name or role');
+    filter.placeholder = 'Filter by name, role, or course';
+    filter.setAttribute('aria-label', 'Filter staff by name, role, or course');
     filter.value = staffFilterQuery;
     home.appendChild(filter);
 

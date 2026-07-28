@@ -321,6 +321,8 @@ function buildSharedOverviewUncached(currentEmail) {
   var me = data.teachers[username(currentEmail)];
   if (!me) return { teachers: [] };
 
+  var staffPhotos = staffPhotoByUsername();
+
   var mine = myStudentNums(me);
 
   // other username -> [shared student numbers]
@@ -366,6 +368,7 @@ function buildSharedOverviewUncached(currentEmail) {
       key: other,
       last: ot.last,
       full: ot.full,
+      photoUrl: staffPhotos[other] || '', // small staff photo by the name
       courses: Object.keys(courseSet).sort(cmpStr),
       students: students,
     };
@@ -852,6 +855,20 @@ function publicStaffModel() {
       return !p.optOut;
     }),
   };
+}
+
+/**
+ * username -> photoUrl for staff who have one — from the public model, so an
+ * opted-out member's photo shows nowhere. Decorates teacher names in the
+ * shared views. (Those views' own caches aren't busted by photo edits, so a
+ * new selfie can take up to the cache TTL to appear there.)
+ */
+function staffPhotoByUsername() {
+  var map = {};
+  publicStaffModel().staff.forEach(function (p) {
+    if (p.photoUrl) map[username(p.email)] = p.photoUrl;
+  });
+  return map;
 }
 
 /**

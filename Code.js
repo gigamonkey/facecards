@@ -440,6 +440,17 @@ function scheduleFor(data, num) {
   return rows;
 }
 
+// The distinct course names a teacher teaches, across all their periods.
+function teacherCourses(teacher) {
+  var set = {};
+  Object.keys(teacher.periods).forEach(function (p) {
+    teacher.periods[p].courses.forEach(function (c) {
+      set[c] = true;
+    });
+  });
+  return Object.keys(set).sort(cmpStr);
+}
+
 // The class name(s) and earliest period a student sits in for one teacher.
 function teacherClassesFor(teacher, num) {
   var names = [];
@@ -801,8 +812,10 @@ function readStaff() {
 function buildStaffModel() {
   return cachedBig('staff', function () {
     var overrides = readStaffOverrides();
+    var teachers = getData().teachers; // roster join, for teachers' courses
     var staff = readStaff().map(function (r) {
       var o = overrides[normalizeEmail(r.email)];
+      var t = teachers[username(r.email)];
       return {
         firstName: String(((o && o.firstName) || r.firstName) || ''),
         lastName: String(((o && o.lastName) || r.lastName) || ''),
@@ -817,6 +830,9 @@ function buildStaffModel() {
         photoOverride: !!(o && o.photo),
         // Opted out of the Staff section — publicStaffModel drops these.
         optOut: !!(o && String(o.optOut || '').trim()),
+        // The distinct courses this person teaches, per the roster ([] for
+        // staff whose email matches no roster teacher).
+        courses: t ? teacherCourses(t) : [],
       };
     });
     staff.sort(function (a, b) {

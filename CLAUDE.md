@@ -107,7 +107,9 @@ scans `CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files, writes the
   403s Google's fetch servers; fallbacks that fetch from a trusted machine
   instead: an admin can upload the page's saved HTML source from the Staff
   view (`uploadStaffDirectory`), or `scripts/scrape-staff.mjs` scrapes
-  locally to TSV (see DEPLOY.md).
+  locally to TSV (see DEPLOY.md). `buildStaffModel()` also joins each entry
+  to the roster's teachers by email username, adding the distinct `courses`
+  they teach (shown on the staff cards).
 - `staff overrides` — staff members' corrections to their own entries
   (`email`, `firstName`, `lastName`, `role`, `photo`, `optOut`), written from
   the `?staff-edit` form (`saveStaffOverride`, `saveStaffPhoto`,

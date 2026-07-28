@@ -200,6 +200,11 @@
     var back = el('div', 'back');
     back.appendChild(el('p', 'name', (p.firstName || '') + ' ' + (p.lastName || '')));
     if (p.role) back.appendChild(el('p', null, p.role));
+    // Teachers also get their distinct courses, joined in from the roster.
+    // (Guarded — a model cached before courses were added won't have them.)
+    (p.courses || []).forEach(function (c) {
+      back.appendChild(el('p', 'staff-course', c));
+    });
     card.appendChild(back);
 
     return card;
@@ -242,6 +247,9 @@
     var info = el('div', 'swipe-info');
     info.appendChild(el('p', 'name', (p.firstName || '') + ' ' + (p.lastName || '')));
     if (p.role) info.appendChild(el('p', null, p.role));
+    (p.courses || []).forEach(function (c) {
+      info.appendChild(el('p', 'staff-course', c));
+    });
     card.appendChild(info);
 
     return card;

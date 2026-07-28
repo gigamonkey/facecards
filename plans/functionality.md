@@ -122,3 +122,8 @@ live; unchecked items are planned.
 - [ ] Per-section volunteer access: a teacher can assign a volunteer to a
       specific section, and that volunteer gets a page scoped to just that
       section's grid and learn/review (v2 — see `done/appscript-conversion.md`)
+
+- [ ] Staff section: a Staff entry in the navbar and menu showing the BHS
+      staff directory (scraped from the public site into a `staff` tab) as a
+      face grid with Learn / Review / Browse and a name/role filter; photos
+      link to the directory's public images (see `staff-section.md`)

@@ -22,6 +22,12 @@ are ~250 ms.
   (stored in a `lists` spreadsheet tab, studied like a class). Not started;
   design still under discussion (see the plan's open questions).
 
+- **`staff-section.md`** — a Staff section (navbar/menu sibling to Mine and
+  Shared): scrape the public BHS staff directory into a `staff` tab
+  (`refreshStaffDirectory()`), then a `?staff` route with a filterable face
+  grid and Learn / Review / Browse over staff. Photos link to the directory's
+  public image URLs. Not started.
+
 ## Loose ends
 
 - **Remove (or gate) the perf/timing logs.** Diagnosing slow loads left

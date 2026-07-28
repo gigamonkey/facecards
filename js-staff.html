@@ -208,46 +208,75 @@
     var status = el('p', 'staff-status');
     wrap.appendChild(status);
 
+    // Always in the DOM; shown only while an override exists.
+    var reset = el('button', 'staff-reset', 'Reset to directory values');
+    reset.type = 'button';
+    wrap.appendChild(reset);
+
+    function setStatus(msg, isError) {
+      status.textContent = msg;
+      status.classList.toggle('error', !!isError);
+    }
+
+    function showOverridden(on) {
+      entry.overridden = on;
+      reset.style.display = on ? '' : 'none';
+    }
+    showOverridden(entry.overridden);
+
+    // Both handlers update the page in place — no navigation. Navigating from
+    // an async success handler (window.top.location.href) gets silently
+    // blocked by the sandbox ('allow-top-navigation-by-user-activation'):
+    // by the time the server call returns, the click's user activation has
+    // expired, so the form just hung on "Saving…". The ← All staff link is a
+    // real click, so leaving still works.
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       save.disabled = true;
-      status.textContent = 'Saving…';
+      setStatus('Saving…');
+      var fields = { firstName: firstName.value, lastName: lastName.value, role: role.value };
       google.script.run
-        .withSuccessHandler(function () {
-          // Land on the staff grid so the change is visible right away.
-          if (ctx.baseUrl) window.top.location.href = appUrl('?staff');
-          else location.reload();
+        .withSuccessHandler(function (result) {
+          save.disabled = false;
+          // Keep the client model in step so revisiting the form (or the
+          // grid, within this page's lifetime) shows the saved values.
+          entry.firstName = firstName.value = String(fields.firstName).trim();
+          entry.lastName = lastName.value = String(fields.lastName).trim();
+          entry.role = role.value = String(fields.role).trim();
+          var overridden = !!(result && result.overridden);
+          setStatus(overridden ? 'Saved.' : 'Saved — same as the directory, so nothing to override.');
+          showOverridden(overridden);
         })
         .withFailureHandler(function (err) {
           save.disabled = false;
-          status.textContent = err.message;
+          setStatus(err.message, true);
         })
-        .saveStaffOverride(
-          { firstName: firstName.value, lastName: lastName.value, role: role.value },
-          asParam(),
-        );
+        .saveStaffOverride(fields, asParam());
     });
 
-    // An override exists — offer the way back to the plain directory values.
-    if (entry.overridden) {
-      var reset = el('button', 'staff-reset', 'Reset to directory values');
-      reset.type = 'button';
-      reset.addEventListener('click', function () {
-        if (!confirm('Discard your edits and go back to the directory values?')) return;
-        status.textContent = 'Resetting…';
-        google.script.run
-          .withSuccessHandler(function () {
-            // Reload the form to show the reverted values.
-            if (ctx.baseUrl) window.top.location.href = appUrl('?staff-edit');
-            else location.reload();
-          })
-          .withFailureHandler(function (err) {
-            status.textContent = err.message;
-          })
-          .deleteStaffOverride(asParam());
-      });
-      wrap.appendChild(reset);
-    }
+    reset.addEventListener('click', function () {
+      if (!confirm('Discard your edits and go back to the directory values?')) return;
+      reset.disabled = true;
+      setStatus('Resetting…');
+      google.script.run
+        .withSuccessHandler(function (base) {
+          reset.disabled = false;
+          // The server sends back the scraped values so the form can show
+          // them without a reload.
+          if (base) {
+            entry.firstName = firstName.value = base.firstName;
+            entry.lastName = lastName.value = base.lastName;
+            entry.role = role.value = base.role;
+          }
+          setStatus('Reset to the directory values.');
+          showOverridden(false);
+        })
+        .withFailureHandler(function (err) {
+          reset.disabled = false;
+          setStatus(err.message, true);
+        })
+        .deleteStaffOverride(asParam());
+    });
 
     wrap.appendChild(
       el(

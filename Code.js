@@ -766,13 +766,28 @@ function saveStaffOverride(fields, as) {
   return { overridden: !same };
 }
 
-/** Drop the calling user's override so their entry tracks the directory again. */
+/**
+ * Drop the calling user's override so their entry tracks the directory again.
+ * Returns the scraped directory values so the form can show them in place —
+ * it can't navigate or reload from an async handler (the sandbox blocks
+ * non-gesture top navigation; see renderStaffEdit).
+ */
 function deleteStaffOverride(as) {
   var viewer = resolveViewer(as);
   if (!viewer) throw new Error('Not authorized.');
   rewriteStaffOverride(viewer.effective, null);
   dropBigCache('staff');
-  return true;
+  var base = null;
+  readStaff().forEach(function (r) {
+    if (!base && normalizeEmail(r.email) === viewer.effective) base = r;
+  });
+  return base
+    ? {
+        firstName: String(base.firstName || ''),
+        lastName: String(base.lastName || ''),
+        role: String(base.role || ''),
+      }
+    : null;
 }
 
 /**

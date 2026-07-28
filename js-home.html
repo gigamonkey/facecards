@@ -199,8 +199,15 @@
   // rebuilds server-side with the change.
   function reloadHome() {
     var ctx = window.CTX || {};
-    if (ctx.baseUrl) window.top.location.href = appUrl('?learn');
-    else location.reload();
+    try {
+      if (ctx.baseUrl) window.top.location.href = appUrl('?learn');
+      else location.reload();
+    } catch (err) {
+      // The sandbox refuses top navigation once the click's user activation
+      // has expired (a slow save). The edit did land — the user just needs a
+      // fresh page, and their next tap is a real gesture.
+      alert('Saved. Tap Mine to see the change.');
+    }
   }
 
   // A class heading with its study-mode buttons — on one row (desktop)

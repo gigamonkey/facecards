@@ -242,7 +242,6 @@
     var info = el('div', 'swipe-info');
     info.appendChild(el('p', 'name', (p.firstName || '') + ' ' + (p.lastName || '')));
     if (p.role) info.appendChild(el('p', null, p.role));
-    if (p.email) info.appendChild(el('p', null, staffUsername(p.email)));
     card.appendChild(info);
 
     return card;

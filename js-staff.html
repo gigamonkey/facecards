@@ -78,12 +78,20 @@
       staffFilterQuery = filter.value;
       var q = staffFilterQuery.trim().toLowerCase();
       var matched = 0;
+      var missing = 0; // matches with no photo — Learn/Review skip these
       staffList().forEach(function (p, i) {
         var show = !q || staffSearchText(p).indexOf(q) !== -1;
         cards[i].style.display = show ? '' : 'none';
-        if (show) matched++;
+        if (show) {
+          matched++;
+          if (!p.photoUrl) missing++;
+        }
       });
-      count.textContent = matched + ' of ' + staffList().length;
+      count.textContent =
+        matched +
+        ' of ' +
+        staffList().length +
+        (missing ? ' (' + missing + ' missing photo' + (missing === 1 ? '' : 's') + ')' : '');
     }
     filter.addEventListener('input', applyFilter);
     applyFilter();

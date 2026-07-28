@@ -610,7 +610,24 @@ function uploadStaffDirectory(html, as) {
  * *source* (view-source:) keeps the real URLs.
  */
 function importStaffHtml(html) {
-  var rows = parseStaffDirectory(html);
+  var rows;
+  try {
+    rows = parseStaffDirectory(html);
+  } catch (err) {
+    // Not the raw page — maybe a saved copy of the view-source viewer or a
+    // Safari webarchive. Recover the source if possible and try again.
+    var source = recoverStaffSource(html); // throws its own error for webarchives
+    try {
+      rows = parseStaffDirectory(source);
+    } catch (err2) {
+      throw new Error(
+        'No staff table found — is that the HTML source of the staff directory page? ' +
+          'Open view-source:' +
+          STAFF_DIRECTORY_URL +
+          ' in a browser, then copy and paste it (or save it and upload the file).',
+      );
+    }
+  }
   // The directory has ~300 rows; far fewer parsed means the page changed shape.
   if (rows.length < 200) {
     throw new Error(
@@ -699,6 +716,26 @@ function parseStaffDirectory(html) {
     });
   }
   return out;
+}
+
+/**
+ * An uploaded "source" file isn't always the raw page. Saving a view-source:
+ * tab saves the source *viewer* — a page that displays the source with the
+ * markup HTML-escaped (Chrome adds line-number gutters too) — and Safari's
+ * ⌘S default is a binary .webarchive. Reconstruct the raw source where
+ * possible: take Chrome's line-content cells if present (skipping the line
+ * numbers), else the whole document; then strip the viewer's own tags and
+ * decode the escaping, leaving the original markup for parseStaffDirectory.
+ */
+function recoverStaffSource(html) {
+  if (/^bplist00/.test(html)) {
+    throw new Error(
+      'That file is a Safari webarchive, not HTML. Copy the page source and paste it ' +
+        'into the form instead (or save the page from Chrome or Firefox).',
+    );
+  }
+  var lines = html.match(/<td class="line-content">[\s\S]*?<\/td>/g);
+  return cellText(lines ? lines.join('\n') : html);
 }
 
 /**

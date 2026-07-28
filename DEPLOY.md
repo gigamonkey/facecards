@@ -186,11 +186,13 @@ Open the `…/exec` URL and check:
   (the User-Agent can't be changed from Apps Script). The function already
   retries with backoff; if it still fails, wait a while and re-run — or import
   from your own machine, which the site trusts. Easiest: open
-  `view-source:https://bhs.berkeleyschools.net/staff/` in a browser, save it
-  (⌘S), and upload the file with the admin **Update the directory** form at
-  the bottom of the app's Staff page. (Don't use "Save Page As → Webpage,
-  Complete" on the rendered page — that rewrites the image URLs, and the
-  upload rejects such files.) Alternatively, from a checkout:
+  `view-source:https://bhs.berkeleyschools.net/staff/` in a browser, select
+  all, copy, and paste into the admin **Update the directory** form at the
+  bottom of the app's Staff page. Uploading a saved file works too — the
+  import recovers the source from a saved view-source page (some browsers
+  save the escaped viewer, not the raw source), but it rejects Safari
+  webarchives and "Save Page As → Webpage, Complete" copies (those rewrite
+  the image URLs). When in doubt, paste. Alternatively, from a checkout:
 
   ```bash
   node scripts/scrape-staff.mjs > staff.tsv

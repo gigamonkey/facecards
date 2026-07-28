@@ -107,10 +107,10 @@
         'p',
         'hint',
         'If refreshing from the directory site fails (its firewall sometimes ' +
-          'blocks Google’s servers), upload a saved copy of the page instead: open ' +
-          'view-source:https://bhs.berkeleyschools.net/staff/ in a browser, save it ' +
-          '(⌘S), and upload the file here. This replaces all the staff data, ' +
-          'though not anyone’s edits to their own entry.',
+          'blocks Google’s servers), bring the page here yourself: open ' +
+          'view-source:https://bhs.berkeleyschools.net/staff/ in a browser, select ' +
+          'all, copy, and paste it below — or save it and upload the file. This ' +
+          'replaces all the staff data, though not anyone’s edits to their own entry.',
       ),
     );
 
@@ -118,8 +118,11 @@
     var file = el('input');
     file.type = 'file';
     file.accept = '.html,.htm,text/html';
-    file.required = true;
     form.appendChild(file);
+
+    var textarea = el('textarea');
+    textarea.placeholder = 'Or paste the page source here';
+    form.appendChild(textarea);
 
     var button = el('button', null, 'Upload');
     button.type = 'submit';
@@ -134,36 +137,47 @@
       status.classList.toggle('error', !!isError);
     }
 
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      if (!file.files || !file.files.length) return;
+    function send(html) {
+      if (!html.trim()) {
+        setStatus('Choose a saved file or paste the page source first.', true);
+        return;
+      }
       button.disabled = true;
       setStatus('Uploading…');
-      var reader = new FileReader();
-      reader.onload = function () {
-        google.script.run
-          .withSuccessHandler(function (result) {
-            button.disabled = false;
-            // In place, no navigation (the sandbox blocks non-gesture
-            // navigation) — the reload link is a real click.
-            setStatus('Imported ' + result.saved + ' staff — ');
-            var a = el('a', null, 'reload to see the changes');
-            a.href = appUrl('?staff');
-            if ((window.CTX || {}).baseUrl) a.target = '_top';
-            status.appendChild(a);
-            status.appendChild(document.createTextNode('.'));
-          })
-          .withFailureHandler(function (err) {
-            button.disabled = false;
-            setStatus(err.message, true);
-          })
-          .uploadStaffDirectory(String(reader.result), asParam());
-      };
-      reader.onerror = function () {
-        button.disabled = false;
-        setStatus('Could not read that file.', true);
-      };
-      reader.readAsText(file.files[0]);
+      google.script.run
+        .withSuccessHandler(function (result) {
+          button.disabled = false;
+          // In place, no navigation (the sandbox blocks non-gesture
+          // navigation) — the reload link is a real click.
+          setStatus('Imported ' + result.saved + ' staff — ');
+          var a = el('a', null, 'reload to see the changes');
+          a.href = appUrl('?staff');
+          if ((window.CTX || {}).baseUrl) a.target = '_top';
+          status.appendChild(a);
+          status.appendChild(document.createTextNode('.'));
+        })
+        .withFailureHandler(function (err) {
+          button.disabled = false;
+          setStatus(err.message, true);
+        })
+        .uploadStaffDirectory(html, asParam());
+    }
+
+    // The file wins if both are given (same rule as the lists form).
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (file.files && file.files.length) {
+        var reader = new FileReader();
+        reader.onload = function () {
+          send(String(reader.result));
+        };
+        reader.onerror = function () {
+          setStatus('Could not read that file.', true);
+        };
+        reader.readAsText(file.files[0]);
+      } else {
+        send(textarea.value);
+      }
     });
 
     return wrap;

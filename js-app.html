@@ -127,8 +127,16 @@
     function showStudy(mode, scope, id) {
       clearStudy();
       var students = studentsFor(scope, id);
+      // Staff flashcards are the face: with no photo there's nothing to
+      // learn, so Learn and Review leave out photo-less staff. (Browse keeps
+      // everyone — it's for reading the directory, not quizzing.)
+      if (scope === 'staff' && mode !== 'browse') {
+        students = students.filter(function (p) {
+          return p.photoUrl;
+        });
+      }
       if (!students.length) {
-        if (scope === 'staff') showStaff(); // the filter matched nobody
+        if (scope === 'staff') showStaff(); // the filter matched nobody studyable
         else showHome(); // deep link to a class the viewer doesn't teach, etc.
         return;
       }

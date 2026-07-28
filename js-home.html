@@ -235,10 +235,17 @@
     wrap.id = 'browse';
     wrap.appendChild(el('h1', null, title));
 
+    // Sorted by the name we display, which prefers the nickname.
+    function effectiveName(s) {
+      return String(s.nickname || s.firstName || '');
+    }
     var cards = students
       .slice()
       .sort(function (a, b) {
-        return String(a.firstName).localeCompare(String(b.firstName));
+        return (
+          effectiveName(a).localeCompare(effectiveName(b)) ||
+          String(a.lastName || '').localeCompare(String(b.lastName || ''))
+        );
       })
       .map(buildBrowseCard);
 

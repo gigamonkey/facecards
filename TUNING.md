@@ -8,9 +8,6 @@ after a card was last shown, the predicted chance you still recall it is
 to urgency. Answering resets `t`; a correct answer grows `s`; a miss resets
 `s`. All the knobs live at the top of `js-learn.html`.
 
-(The Classic mode's Leitner engine in `js-leitner.html` has no knobs — its
-schedule is fixed by the Fibonacci row sizes.)
-
 Review mode (`js-review.html`) is this same engine with one override: unseen
 cards enter play with stability already at the graduation bar (`priorS`),
 an optimistic prior that a correct first answer confirms — the card
@@ -87,8 +84,8 @@ no-new-card-after-a-miss property.
 Any retuning should keep these (all verified by simulation on 1–60 card
 decks):
 
-- Sessions terminate, at a length in the same ballpark as Classic
-  (~6–8 asks per card for an imperfect learner).
+- Sessions terminate, at a reasonable length (~6–8 asks per card for an
+  imperfect learner).
 
 - A missed card is re-asked within a few cards.
 

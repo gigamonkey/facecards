@@ -102,8 +102,9 @@ includes, in order: `js-dom` (`$`, `$$`, `el`, `appUrl`, `helpOpen`) →
 `js-random` (`shuffled`) → `js-cards` (`buildCard`, photo loading: the
 direct-vs-proxy probe, per-session photo caches, pooled preloading) →
 `js-study` (`runStudy` shared input/advance driver) → `js-learn` (`LearnState`
-— Fibonacci-row Leitner engine) → `js-review` (`ReviewState` — single pass +
-missed requeue) → `js-home` (`renderHome` face grids + card flip,
+— forgetting-curve spaced-repetition engine, tuning documented in `TUNING.md`)
+→ `js-review` (`ReviewState` — the Learn engine with an optimistic prior: one
+pass if nothing is missed) → `js-home` (`renderHome` face grids + card flip,
 `renderBrowse` one-at-a-time carousel with the info and schedule always
 showing) → `js-shared` (shared-students views: desktop table + overview,
 mobile list + swipe carousel; `runCarousel`, reused by browse) → `js-app`

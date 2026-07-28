@@ -78,11 +78,12 @@ live; unchecked items are planned.
 
 - [x] On phones, larger study photos and info text than the grids
 
-- [x] **Learn** mode: spaced-repetition engine (Leitner boxes sized by the
-      Fibonacci sequence); wrong answers recycle to the deck
+- [x] **Learn** mode: spaced-repetition engine (per-card forgetting curve;
+      see `TUNING.md`); missed cards come back quickly, at stretching gaps
 
-- [x] **Review** mode: one pass through the deck, then re-runs only the missed
-      cards until none remain ("Perfect run!" when nothing was missed)
+- [x] **Review** mode: the Learn engine with an optimistic prior — a single
+      pass if nothing is missed ("Perfect run!"), with missed cards falling
+      into the Learn schedule until relearned
 
 - [x] **Browse** mode: the students one at a time with everything visible — the
       photo, name, grade/gender, and a table of the student's full schedule

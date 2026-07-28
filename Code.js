@@ -91,7 +91,6 @@ function doGet(e) {
   var mode;
   if (
     params.mode === 'learn' ||
-    params.mode === 'classic' ||
     params.mode === 'review' ||
     params.mode === 'browse'
   ) {

@@ -70,7 +70,7 @@
   }
 
   // Photos fetched through the script are held in memory by fileId, so card
-  // repeats (Leitner, review re-runs) don't refetch within a session.
+  // repeats (Learn re-asks, review re-runs) don't refetch within a session.
   var PHOTO_CACHE = {};
 
   function hasServer() {
@@ -147,7 +147,7 @@
   }
 
   // Fetch a photo through the server as a data URL and hand it to swap(). Cached
-  // by fileId so card repeats (Leitner, review re-runs) don't refetch.
+  // by fileId so card repeats (Learn re-asks, review re-runs) don't refetch.
   function proxyLoad(fileId, swap) {
     if (PHOTO_CACHE[fileId]) {
       var cached = el('img');

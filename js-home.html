@@ -211,12 +211,10 @@
     return head;
   }
 
-  // The Learn/Classic/Review/Browse buttons for a study scope. (Classic is the
-  // old Leitner-box learn scheduler, kept around to compare against Learn's
-  // forgetting-curve scheduler.)
+  // The Learn/Review/Browse buttons for a study scope.
   function buttonsRow(onStudy, scope, id) {
     var div = el('div', 'buttons');
-    ['learn', 'classic', 'review', 'browse'].forEach(function (mode) {
+    ['learn', 'review', 'browse'].forEach(function (mode) {
       div.appendChild(
         studyLink(mode.charAt(0).toUpperCase() + mode.slice(1), function () {
           onStudy(mode, scope, id);

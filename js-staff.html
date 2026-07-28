@@ -393,13 +393,18 @@
 
   // ---- Photo capture ------------------------------------------------------
   //
-  // Take a replacement photo with the device camera, saved as a small JPEG
-  // data URL in the overrides tab. The camera lifecycle, selfie mirroring,
-  // and capture-crop approach are borrowed from gigamonkey/photobooth
-  // (public/camera.js), cut down for this use: the preview is an
-  // object-fit: cover box with the card's aspect ratio, and the capture is
-  // the matching center-cover crop scaled to exactly STAFF_PHOTO_W x
-  // STAFF_PHOTO_H — no pan/zoom, no countdown, no carousel.
+  // Take or choose a replacement photo, saved as a small JPEG data URL in
+  // the overrides tab. There is no live in-page camera: getUserMedia can
+  // never work here, because Google's sandboxed iframe doesn't delegate
+  // camera permission to the embedded app (Permissions Policy), so it
+  // rejects instantly with NotAllowedError. Instead, a file input does the
+  // capture — on phones the picker offers the camera directly (that UI is
+  // browser chrome, outside the iframe's policy); on desktop it's a file
+  // chooser. The center-cover crop and preview-then-confirm flow are
+  // borrowed from gigamonkey/photobooth (public/camera.js), minus the
+  // viewfinder: the picked image is cropped to its largest centered region
+  // with the card's aspect ratio and scaled to exactly STAFF_PHOTO_W x
+  // STAFF_PHOTO_H.
 
   var STAFF_PHOTO_W = 172;
   var STAFF_PHOTO_H = 228;
@@ -407,8 +412,15 @@
   function buildPhotoTaker(entry, photoSlot, setStatus) {
     var wrap = el('div', 'staff-camera');
 
+    var input = el('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    input.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(input);
+
     var openControls = el('div', 'staff-camera-controls');
-    var take = el('button', null, 'Take a new photo');
+    var take = el('button', null, 'Take or choose a photo');
     var remove = el('button', 'staff-remove-photo', 'Remove photo');
     [take, remove].forEach(function (b) {
       b.type = 'button';
@@ -417,154 +429,90 @@
     wrap.appendChild(openControls);
 
     var stage = el('div', 'staff-camera-stage');
-    var video = el('video');
-    video.autoplay = true;
-    video.muted = true;
-    video.playsInline = true;
-    video.setAttribute('playsinline', ''); // iOS inline playback
-    stage.appendChild(video);
     var shot = el('img', 'staff-shot');
     shot.alt = 'Your new photo';
     stage.appendChild(shot);
     wrap.appendChild(stage);
 
-    var liveControls = el('div', 'staff-camera-controls');
-    var snap = el('button', null, 'Snap');
-    var flip = el('button', null, 'Switch camera');
+    var pickControls = el('div', 'staff-camera-controls');
     var use = el('button', null, 'Use this photo');
-    var retake = el('button', null, 'Retake');
+    var different = el('button', null, 'Choose a different photo');
     var cancel = el('button', null, 'Cancel');
-    [snap, flip, use, retake, cancel].forEach(function (b) {
+    [use, different, cancel].forEach(function (b) {
       b.type = 'button';
-      liveControls.appendChild(b);
+      pickControls.appendChild(b);
     });
-    wrap.appendChild(liveControls);
+    wrap.appendChild(pickControls);
 
-    var stream = null;
-    var facing = 'user';
-    var multipleCameras = false;
-    var captured = ''; // the snapped data URL awaiting "Use this photo"
+    var captured = ''; // the cropped data URL awaiting "Use this photo"
 
-    // States: 'closed' (buttons only), 'live' (video), 'captured' (preview).
+    // States: 'closed' (buttons only) | 'captured' (cropped preview).
     function show(state) {
       openControls.style.display = state === 'closed' ? '' : 'none';
       remove.style.display = entry.photoOverride ? '' : 'none';
-      stage.style.display = state === 'closed' ? 'none' : '';
-      video.style.display = state === 'live' ? '' : 'none';
-      shot.style.display = state === 'captured' ? '' : 'none';
-      liveControls.style.display = state === 'closed' ? 'none' : '';
-      snap.style.display = state === 'live' ? '' : 'none';
-      flip.style.display = state === 'live' && multipleCameras ? '' : 'none';
-      use.style.display = state === 'captured' ? '' : 'none';
-      retake.style.display = state === 'captured' ? '' : 'none';
+      stage.style.display = state === 'captured' ? '' : 'none';
+      pickControls.style.display = state === 'captured' ? '' : 'none';
     }
     show('closed');
 
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach(function (t) {
-          t.stop();
-        });
-        stream = null;
-      }
-      video.srcObject = null;
-    }
+    take.addEventListener('click', function () {
+      input.click();
+    });
+    different.addEventListener('click', function () {
+      input.click();
+    });
+    cancel.addEventListener('click', function () {
+      captured = '';
+      input.value = '';
+      show('closed');
+      setStatus('');
+    });
 
-    function startCamera() {
-      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
-        setStatus('This browser has no camera support.', true);
+    input.addEventListener('change', function () {
+      if (!input.files || !input.files.length) return;
+      var url = URL.createObjectURL(input.files[0]);
+      var img = new Image();
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        cropTo(img);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        setStatus('Could not read that image.', true);
+      };
+      img.src = url;
+    });
+
+    // Center-cover crop to the card size. Browsers EXIF-rotate images
+    // before drawImage these days, so phone photos come out upright.
+    function cropTo(img) {
+      var iw = img.naturalWidth;
+      var ih = img.naturalHeight;
+      if (!iw || !ih) {
+        setStatus('Could not read that image.', true);
         return;
       }
-      setStatus('Starting camera…');
-      navigator.mediaDevices
-        .getUserMedia({
-          // A resolution hint well above the card size; capture downscales.
-          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } },
-          audio: false,
-        })
-        .then(function (s) {
-          stream = s;
-          video.srcObject = s;
-          // Mirror the live preview only for the front camera, so it feels
-          // like a mirror; capture() mirrors to match (WYSIWYG).
-          video.style.transform = facing === 'user' ? 'scaleX(-1)' : '';
-          show('live'); // before play() — iOS won't play a display:none video
-          return video.play();
-        })
-        .then(function () {
-          setStatus('');
-          // Devices are only enumerable once permission is granted.
-          if (!multipleCameras && navigator.mediaDevices.enumerateDevices) {
-            navigator.mediaDevices.enumerateDevices().then(function (devices) {
-              multipleCameras =
-                devices.filter(function (d) {
-                  return d.kind === 'videoinput';
-                }).length > 1;
-              if (stream) show('live'); // reveal the Switch button
-            });
-          }
-        })
-        .catch(function (err) {
-          stopCamera();
-          show('closed');
-          setStatus(
-            err && err.name === 'NotAllowedError'
-              ? 'Camera permission denied — allow camera access in your browser and try again.'
-              : 'Could not start the camera: ' + ((err && err.message) || err),
-            true,
-          );
-        });
-    }
-
-    function capture() {
-      var vw = video.videoWidth;
-      var vh = video.videoHeight;
-      if (!vw || !vh) {
-        setStatus('The camera isn’t ready yet — try again.', true);
-        return;
-      }
-      // The largest centered region of the video with the card's aspect
-      // ratio — the same region the object-fit: cover preview shows.
-      var srcW = vw;
-      var srcH = vh;
-      if (vw * STAFF_PHOTO_H > vh * STAFF_PHOTO_W) srcW = (vh * STAFF_PHOTO_W) / STAFF_PHOTO_H;
-      else srcH = (vw * STAFF_PHOTO_H) / STAFF_PHOTO_W;
+      var srcW = iw;
+      var srcH = ih;
+      if (iw * STAFF_PHOTO_H > ih * STAFF_PHOTO_W) srcW = (ih * STAFF_PHOTO_W) / STAFF_PHOTO_H;
+      else srcH = (iw * STAFF_PHOTO_H) / STAFF_PHOTO_W;
 
       var canvas = el('canvas');
       canvas.width = STAFF_PHOTO_W;
       canvas.height = STAFF_PHOTO_H;
       var g = canvas.getContext('2d');
-      if (facing === 'user') {
-        g.translate(STAFF_PHOTO_W, 0);
-        g.scale(-1, 1);
-      }
-      g.drawImage(video, (vw - srcW) / 2, (vh - srcH) / 2, srcW, srcH, 0, 0, STAFF_PHOTO_W, STAFF_PHOTO_H);
+      g.imageSmoothingQuality = 'high'; // big phone photos downscale a lot
+      g.drawImage(img, (iw - srcW) / 2, (ih - srcH) / 2, srcW, srcH, 0, 0, STAFF_PHOTO_W, STAFF_PHOTO_H);
       captured = canvas.toDataURL('image/jpeg', 0.9);
       shot.src = captured;
-      show('captured'); // the stream stays live so Retake is instant
+      setStatus('');
+      show('captured');
     }
 
     function swapPhoto() {
       photoSlot.innerHTML = '';
       photoSlot.appendChild(staffPhoto(entry));
     }
-
-    take.addEventListener('click', startCamera);
-    snap.addEventListener('click', capture);
-    retake.addEventListener('click', function () {
-      show('live');
-    });
-    cancel.addEventListener('click', function () {
-      stopCamera();
-      captured = '';
-      show('closed');
-      setStatus('');
-    });
-    flip.addEventListener('click', function () {
-      stopCamera();
-      facing = facing === 'user' ? 'environment' : 'user';
-      startCamera();
-    });
 
     use.addEventListener('click', function () {
       use.disabled = true;
@@ -575,7 +523,7 @@
           entry.photoUrl = captured;
           entry.photoOverride = true;
           swapPhoto();
-          stopCamera();
+          input.value = '';
           show('closed');
           setStatus('Photo saved.');
         })
@@ -608,6 +556,7 @@
 
     return wrap;
   }
+
 
   // A labeled text input appended to the form; returns the input.
   function editField(form, label, value, required) {

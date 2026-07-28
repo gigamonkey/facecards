@@ -112,9 +112,10 @@ scans `CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files, writes the
   (`email`, `firstName`, `lastName`, `role`, `photo`), written from the
   `?staff-edit` form (`saveStaffOverride`, `saveStaffPhoto`,
   `removeStaffPhoto`; `updateStaffOverride` does the merging rewrite). The
-  `photo` column holds a self-taken 172x228 JPEG as a data URL (camera code
-  borrowed from gigamonkey/photobooth), which the model serves as the entry's
-  `photoUrl`. Merged over the scraped rows in `buildStaffModel()` (non-empty
+  `photo` column holds a self-taken 172x228 JPEG as a data URL (a file-input
+  picker + canvas crop — getUserMedia can't work in Google's iframe, which
+  doesn't delegate camera permission; crop/confirm flow borrowed from
+  gigamonkey/photobooth), which the model serves as the entry's `photoUrl`. Merged over the scraped rows in `buildStaffModel()` (non-empty
   cell wins, per field), so a directory re-scrape never clobbers an edit.
 
 **Client.** `index.html` bootstraps `window.MODEL/ROUTE/CTX/SHARED` then

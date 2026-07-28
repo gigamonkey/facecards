@@ -191,17 +191,15 @@
     return wrap;
   }
 
-  // A staff flashcard (grid and study modes): photo or initials front; first
-  // name, full name, role, and username on the back.
+  // A staff flashcard (grid and study modes): photo or initials front; the
+  // full name big, then the role, on the back.
   function buildStaffCard(p) {
     var card = el('div', 'card');
     card.appendChild(staffPhoto(p));
 
     var back = el('div', 'back');
-    back.appendChild(el('p', 'name', p.firstName));
-    back.appendChild(el('p', null, (p.firstName || '') + ' ' + (p.lastName || '')));
+    back.appendChild(el('p', 'name', (p.firstName || '') + ' ' + (p.lastName || '')));
     if (p.role) back.appendChild(el('p', null, p.role));
-    if (p.email) back.appendChild(el('p', null, staffUsername(p.email)));
     card.appendChild(back);
 
     return card;

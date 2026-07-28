@@ -11,6 +11,14 @@ to urgency. Answering resets `t`; a correct answer grows `s`; a miss resets
 (The Classic mode's Leitner engine in `js-leitner.html` has no knobs — its
 schedule is fixed by the Fibonacci row sizes.)
 
+Review mode (`js-review.html`) is this same engine with one override: unseen
+cards enter play with stability already at the graduation bar (`priorS`),
+an optimistic prior that a correct first answer confirms — the card
+graduates on the spot, so a perfect run is a single shuffled pass. A miss
+resets stability to `LEARN_START_S` like any other miss, so a missed card
+falls into the normal Learn schedule below. All the knobs therefore apply
+to Review too, and only to its missed cards.
+
 ## LEARN_START_S (currently 1)
 
 The stability of a brand-new card, and what a miss resets stability to. With

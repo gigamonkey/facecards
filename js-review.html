@@ -1,32 +1,15 @@
 <script>
-  // "Review" engine: run through the deck once, requeue missed cards, and
-  // repeat until nothing is missed. Ported from public/js/review.js.
+  // "Review" engine: the Learn scheduler with an optimistic prior. Where Learn
+  // assumes every card is unknown, Review assumes every card is already
+  // learned: unseen cards enter play with stability at the graduation bar, so
+  // a correct answer confirms the prior and graduates the card on the spot —
+  // get everything right and the session is a single shuffled pass. A miss
+  // resets stability just like any Learn miss, dropping that card into the
+  // normal spaced-repetition schedule until it re-earns graduation.
 
   function ReviewState(cards) {
-    this.deck = shuffled(cards);
-    this.missed = [];
-    this.done = [];
-    this.numberMissed = 0;
+    var state = new LearnState(cards);
+    state.priorS = state.graduationBar;
+    return state; // a constructor returning an object makes `new` yield it
   }
-
-  ReviewState.prototype.next = function () {
-    if (this.deck.length === 0 && this.missed.length > 0) {
-      this.deck = this.missed;
-      this.missed = [];
-    }
-    return this.deck.length > 0 ? this.deck.pop() : null;
-  };
-
-  ReviewState.prototype.correct = function (card) {
-    this.done.push(card);
-  };
-
-  ReviewState.prototype.incorrect = function (card) {
-    this.missed.push(card);
-    this.numberMissed++;
-  };
-
-  ReviewState.prototype.doneMessage = function () {
-    return 'Done!' + (this.numberMissed === 0 ? ' Perfect run!' : '');
-  };
 </script>

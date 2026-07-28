@@ -43,6 +43,11 @@
     this.lastCard = null;
     this.misses = 0;
     this.memory = new Map(); // card -> { s, askedAt, askedW }
+    // Stability a card enters play with. Review mode overrides this with the
+    // graduation bar (an optimistic prior: "you probably know these"), so a
+    // correct first answer graduates the card on the spot while a miss drops
+    // it into the normal schedule.
+    this.priorS = LEARN_START_S;
     // A deck can't produce gaps longer than the number of other cards in it.
     this.graduationBar = Math.min(
       LEARN_GRADUATED_S,
@@ -63,7 +68,7 @@
     } else {
       // A brand-new card is maximally unknown; a correct first answer means
       // the teacher already knows this student, so let it fast-track out.
-      this.memory.set(card, { s: LEARN_START_S, askedAt: this.trial, askedW: 1 });
+      this.memory.set(card, { s: this.priorS, askedAt: this.trial, askedW: 1 });
       this.active.push(card);
     }
     this.trial++;

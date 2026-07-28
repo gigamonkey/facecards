@@ -184,14 +184,19 @@ Open the `…/exec` URL and check:
 - **`refreshStaffDirectory` fails with HTTP 403.** The school site's firewall
   intermittently blocks fetches from Google's shared servers by IP reputation
   (the User-Agent can't be changed from Apps Script). The function already
-  retries with backoff; if it still fails, wait a while and re-run — or scrape
-  from your own machine, which the site trusts:
+  retries with backoff; if it still fails, wait a while and re-run — or import
+  from your own machine, which the site trusts. Easiest: open
+  `view-source:https://bhs.berkeleyschools.net/staff/` in a browser, save it
+  (⌘S), and upload the file with the admin **Update the directory** form at
+  the bottom of the app's Staff page. (Don't use "Save Page As → Webpage,
+  Complete" on the rendered page — that rewrites the image URLs, and the
+  upload rejects such files.) Alternatively, from a checkout:
 
   ```bash
   node scripts/scrape-staff.mjs > staff.tsv
   ```
 
-  Then clear out the `staff` tab, paste `staff.tsv`'s contents at cell A1, and
+  then clear out the `staff` tab, paste `staff.tsv`'s contents at cell A1, and
   run `clearCaches` from the editor.
 
 ## Optional: a staging copy

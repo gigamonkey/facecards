@@ -586,13 +586,46 @@ function getPhoto(fileId) {
  * (start of each year at minimum).
  */
 function refreshStaffDirectory() {
-  var html = fetchStaffPage();
+  importStaffHtml(fetchStaffPage());
+}
+
+/**
+ * Admin upload of the directory page's saved HTML source, via the form at the
+ * bottom of the Staff view — the no-tooling fallback for when the site's
+ * firewall blocks Google's fetch servers (refreshStaffDirectory 403s): open
+ * view-source: on the directory page, save it, upload the file.
+ */
+function uploadStaffDirectory(html, as) {
+  var viewer = resolveViewer(as);
+  if (!viewer || !viewer.isAdmin) throw new Error('Not authorized.');
+  return { saved: importStaffHtml(String(html || '')) };
+}
+
+/**
+ * Parse directory-page HTML and rewrite the `staff` tab from it; returns the
+ * row count. Two guards, both throwing before the tab is touched: a row-count
+ * floor (a page redesign must not silently empty the Staff section), and a
+ * photo-URL sanity check — a browser's "Save Page As" copy rewrites img srcs
+ * to local file paths, which would quietly break every photo; the page
+ * *source* (view-source:) keeps the real URLs.
+ */
+function importStaffHtml(html) {
   var rows = parseStaffDirectory(html);
-  // The directory has ~300 rows; far fewer parsed means the page changed
-  // shape, and overwriting the tab would silently empty the Staff section.
+  // The directory has ~300 rows; far fewer parsed means the page changed shape.
   if (rows.length < 200) {
     throw new Error(
       'Only parsed ' + rows.length + ' staff rows — did the page layout change? Tab left untouched.',
+    );
+  }
+  var badPhotos = rows.filter(function (r) {
+    return r.photoUrl && r.photoUrl.indexOf('/wp-content/') === -1;
+  }).length;
+  if (badPhotos > rows.length / 10) {
+    throw new Error(
+      badPhotos +
+        ' rows have photo URLs that don\'t point at the directory site — was this file made ' +
+        'with "Save Page As"? That rewrites the image links. Save the page source instead ' +
+        '(open view-source: on the directory page, then save). Tab left untouched.',
     );
   }
 
@@ -608,6 +641,7 @@ function refreshStaffDirectory() {
   Logger.log('Wrote ' + rows.length + ' staff rows to the "' + STAFF_SHEET + '" tab.');
 
   clearCaches(); // the new directory should show up immediately
+  return rows.length;
 }
 
 /**

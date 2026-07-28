@@ -88,7 +88,85 @@
     filter.addEventListener('input', applyFilter);
     applyFilter();
 
+    // Admins can replace the directory data from a saved copy of the page.
+    if ((window.CTX || {}).isAdmin) home.appendChild(buildStaffUploadForm());
+
     container.appendChild(home);
+  }
+
+  // Admin-only: rewrite the `staff` tab from an uploaded copy of the
+  // directory page's HTML source — the no-tooling fallback for when the
+  // site's firewall blocks Google's fetch servers and refreshStaffDirectory
+  // 403s. The server rejects "Save Page As" copies (they rewrite the image
+  // URLs); the page *source* keeps them.
+  function buildStaffUploadForm() {
+    var wrap = el('div', 'staff-upload');
+    wrap.appendChild(el('h2', null, 'Update the directory'));
+    wrap.appendChild(
+      el(
+        'p',
+        'hint',
+        'If refreshing from the directory site fails (its firewall sometimes ' +
+          'blocks Google’s servers), upload a saved copy of the page instead: open ' +
+          'view-source:https://bhs.berkeleyschools.net/staff/ in a browser, save it ' +
+          '(⌘S), and upload the file here. This replaces all the staff data, ' +
+          'though not anyone’s edits to their own entry.',
+      ),
+    );
+
+    var form = el('form');
+    var file = el('input');
+    file.type = 'file';
+    file.accept = '.html,.htm,text/html';
+    file.required = true;
+    form.appendChild(file);
+
+    var button = el('button', null, 'Upload');
+    button.type = 'submit';
+    form.appendChild(button);
+    wrap.appendChild(form);
+
+    var status = el('p', 'staff-status');
+    wrap.appendChild(status);
+
+    function setStatus(msg, isError) {
+      status.textContent = msg;
+      status.classList.toggle('error', !!isError);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!file.files || !file.files.length) return;
+      button.disabled = true;
+      setStatus('Uploading…');
+      var reader = new FileReader();
+      reader.onload = function () {
+        google.script.run
+          .withSuccessHandler(function (result) {
+            button.disabled = false;
+            // In place, no navigation (the sandbox blocks non-gesture
+            // navigation) — the reload link is a real click.
+            setStatus('Imported ' + result.saved + ' staff — ');
+            var a = el('a', null, 'reload to see the changes');
+            a.href = appUrl('?staff');
+            if ((window.CTX || {}).baseUrl) a.target = '_top';
+            status.appendChild(a);
+            status.appendChild(document.createTextNode('.'));
+          })
+          .withFailureHandler(function (err) {
+            button.disabled = false;
+            setStatus(err.message, true);
+          })
+          .uploadStaffDirectory(String(reader.result), asParam());
+      };
+      reader.onerror = function () {
+        button.disabled = false;
+        setStatus('Could not read that file.', true);
+      };
+      reader.readAsText(file.files[0]);
+    });
+
+    return wrap;
   }
 
   // A staff flashcard (grid and study modes): photo or initials front; first

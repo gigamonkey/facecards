@@ -757,6 +757,14 @@
     body.view-study {
       padding-bottom: 0;
     }
+    /* The desktop view-shared box (90% width + 2em padding) squeezes a
+       small phone to ~270px of content — the 50vw photo plus the info
+       column overflowed. Go full width with a slim gutter instead. */
+    body.view-shared {
+      width: 100vw;
+      margin: calc(var(--nav-h) + 1vh) auto 3vh;
+      padding: 1em 0.75em 3em;
+    }
     .shared-overview-table td.photo img,
     .shared-overview-table td.photo .initials {
       width: 50vw;

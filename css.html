@@ -517,20 +517,14 @@
   .shared-overview-table tr:last-child td {
     border-bottom: none;
   }
-  /* The photo is the tap target — about half the screen on a phone, capped
-     on big screens. The initials box matches it for photo-less teachers. */
+  /* The photo is the tap target. The directory serves its photos at the
+     natural card size (172x228; selfies match exactly), so desktop renders
+     them as-is — the .initials base sizing already matches. On phones they
+     scale up to about half the screen (see the media query below). */
   .shared-overview-table td.photo img,
   .shared-overview-table td.photo .initials {
     display: block;
-    width: 50vw;
-    max-width: 400px;
-    aspect-ratio: 172 / 228;
-    height: auto;
-    object-fit: cover;
     background: #dde;
-  }
-  .shared-overview-table td.photo .initials {
-    font-size: min(18vw, 6rem);
   }
   .shared-overview-table td.info .name {
     font-size: 1.35em;
@@ -762,6 +756,16 @@
     }
     body.view-study {
       padding-bottom: 0;
+    }
+    .shared-overview-table td.photo img,
+    .shared-overview-table td.photo .initials {
+      width: 50vw;
+      aspect-ratio: 172 / 228;
+      height: auto;
+      object-fit: cover;
+    }
+    .shared-overview-table td.photo .initials {
+      font-size: min(18vw, 6rem);
     }
   }
 </style>

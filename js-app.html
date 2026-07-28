@@ -338,13 +338,8 @@
       window.scrollTo(0, 0);
     } else if (ROUTE.mode === 'shared-overview') {
       clearStudy();
-      if (isMobile()) {
-        setView('shared');
-        renderSharedList(app, window.SHARED);
-      } else {
-        setView('home'); // reuse the home grid styling (face grids under headings)
-        renderSharedOverview(app, window.SHARED);
-      }
+      setView('shared'); // one table for all devices
+      renderSharedOverview(app, window.SHARED);
       window.scrollTo(0, 0);
     } else if (ROUTE.mode === 'staff') {
       showStaff();

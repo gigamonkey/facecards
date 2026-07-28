@@ -352,24 +352,12 @@ function buildSharedOverviewUncached(currentEmail) {
         );
       });
 
-    // Distinct individual course names this teacher teaches the shared students.
-    var courseSet = {};
-    nums.forEach(function (num) {
-      Object.keys(ot.periods).forEach(function (p) {
-        if (ot.periods[p].students.indexOf(num) !== -1) {
-          ot.periods[p].courses.forEach(function (c) {
-            courseSet[c] = true;
-          });
-        }
-      });
-    });
-
     return {
       key: other,
       last: ot.last,
       full: ot.full,
-      photoUrl: staffPhotos[other] || '', // small staff photo by the name
-      courses: Object.keys(courseSet).sort(cmpStr),
+      photoUrl: staffPhotos[other] || '', // the overview row's photo
+      courses: teacherCourses(ot), // everything they teach, not just shared
       students: students,
     };
   });

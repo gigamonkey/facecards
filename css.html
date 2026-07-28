@@ -504,14 +504,43 @@
     display: inline-block;
     margin-bottom: 1em;
   }
-  /* Small staff photo next to a teacher's name in the shared views. */
-  .teacher-photo {
-    height: 1.6em;
+  /* ---- Shared overview table (the ?shared landing page) ---- */
+  .shared-overview-table {
+    border-collapse: collapse;
+    margin-top: 0.5em;
+  }
+  .shared-overview-table td {
+    padding: 10px 14px 10px 0;
+    vertical-align: top;
+    border-bottom: 1px solid #ccd;
+  }
+  .shared-overview-table tr:last-child td {
+    border-bottom: none;
+  }
+  /* The photo is the tap target — about half the screen on a phone, capped
+     on big screens. The initials box matches it for photo-less teachers. */
+  .shared-overview-table td.photo img,
+  .shared-overview-table td.photo .initials {
+    display: block;
+    width: 50vw;
+    max-width: 400px;
     aspect-ratio: 172 / 228;
+    height: auto;
     object-fit: cover;
-    vertical-align: middle;
-    margin-right: 0.45em;
-    border-radius: 4px;
+    background: #dde;
+  }
+  .shared-overview-table td.photo .initials {
+    font-size: min(18vw, 6rem);
+  }
+  .shared-overview-table td.info .name {
+    font-size: 1.35em;
+    margin: 0 0 4px;
+  }
+  .shared-overview-table td.info p {
+    margin: 0 0 4px;
+  }
+  .shared-overview-table td.info .count {
+    color: #445;
   }
 
   #shared-overview .shared-courses {
@@ -553,23 +582,6 @@
   .shared-table td.info p,
   .shared-table td.classes p {
     margin: 0 0 2px;
-  }
-
-  /* ---- Mobile shared: teacher list ---- */
-  #shared-list {
-    text-align: center;
-  }
-  #shared-list h1 {
-    font-size: clamp(24px, 8vmin, 36px);
-    margin: 0.3em 0 0.6em;
-  }
-  #shared-list .shared-list-row {
-    margin: 0.8em 0;
-    font-size: clamp(22px, 7vmin, 30px);
-  }
-  #shared-list .count {
-    color: #445;
-    font-size: 0.55em;
   }
 
   /* ---- One-at-a-time swipe viewer (mobile shared-with, and browse) ---- */

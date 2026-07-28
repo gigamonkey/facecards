@@ -133,10 +133,11 @@ direct-vs-proxy probe, per-session photo caches, pooled preloading) →
 → `js-review` (`ReviewState` — the Learn engine with an optimistic prior: one
 pass if nothing is missed) → `js-home` (`renderHome` face grids + card flip,
 `renderBrowse` one-at-a-time carousel with the info and schedule always
-showing) → `js-shared` (shared-students views: desktop table + overview,
-mobile list + swipe carousel; `runCarousel`, reused by browse; teacher
-names in the overview/list carry a small staff photo where the staff
-directory has one, joined server-side from the public staff model) → `js-staff`
+showing) → `js-shared` (shared-students views: the ?shared overview — a table of
+sharing teachers, big staff photo linking to their shared-with page plus
+name/courses/shared-count, photos joined server-side from the public
+staff model — the desktop shared-with table, and the mobile swipe
+carousel; `runCarousel`, reused by browse) → `js-staff`
 (the staff directory: filterable face grid, staff flash/browse cards — plain
 `<img>`s to the public photo URLs, no Drive proxy machinery — and the
 `?staff-edit` self-edit form) → `js-app`

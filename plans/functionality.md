@@ -55,11 +55,10 @@ live; unchecked items are planned.
       mobile it's a swipe-through viewer: one student at a time (photo, info,
       both teachers' classes), swipe left/right to move
 
-- [x] `?shared` shows an overview: every teacher the current teacher shares
-      students with, each as a face grid (plus the distinct course names those
-      students take with that teacher), with the teacher's name linking to their
-      `?shared-with=` page. On mobile it's a plain list of teachers with
-      shared-student counts
+- [x] `?shared` shows an overview: a table of every teacher the current
+      teacher shares students with — a large staff photo (or initials) linking
+      to their `?shared-with=` page, beside their name, the courses they
+      teach, and the shared-student count. The same table on all devices
 
 ## Study modes
 

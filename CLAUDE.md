@@ -109,9 +109,13 @@ scans `CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files, writes the
   view (`uploadStaffDirectory`), or `scripts/scrape-staff.mjs` scrapes
   locally to TSV (see DEPLOY.md).
 - `staff overrides` — staff members' corrections to their own entries
-  (`email`, `firstName`, `lastName`, `role`, `photo`), written from the
-  `?staff-edit` form (`saveStaffOverride`, `saveStaffPhoto`,
-  `removeStaffPhoto`; `updateStaffOverride` does the merging rewrite). The
+  (`email`, `firstName`, `lastName`, `role`, `photo`, `optOut`), written from
+  the `?staff-edit` form (`saveStaffOverride`, `saveStaffPhoto`,
+  `removeStaffPhoto`, `saveStaffOptOut`; `updateStaffOverride` does the
+  merging rewrite). An opted-out member is dropped from `publicStaffModel()`
+  — absent from every viewer-facing route — but `?staff-edit` resolves the
+  viewer's entry from the full model (`staffEntryFor`, sent as
+  `window.STAFF_ENTRY`), so they can rejoin. The
   `photo` column holds a self-taken 172x228 JPEG as a data URL (a file-input
   picker + canvas crop — getUserMedia can't work in Google's iframe, which
   doesn't delegate camera permission; crop/confirm flow borrowed from

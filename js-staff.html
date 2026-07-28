@@ -262,9 +262,10 @@
 
   // The self-edit form (?staff-edit): correct your own directory entry. Saves
   // to the `staff overrides` tab via google.script.run, so a directory
-  // re-scrape doesn't undo the fix. Photo editing is deliberately absent for
-  // now. The viewer's entry is found by ctx.effective, so an admin editing
-  // via ?as= sees and edits the impersonated person's entry.
+  // re-scrape doesn't undo the fix. The server sends the viewer's own entry
+  // as window.STAFF_ENTRY, resolved from the full model — so it's here even
+  // when the viewer has opted out of the public Staff section — and honors
+  // ?as=, so an admin sees and edits the impersonated person's entry.
   function renderStaffEdit(container) {
     container.innerHTML = '';
     var ctx = window.CTX || {};
@@ -278,7 +279,7 @@
 
     wrap.appendChild(el('h1', null, 'My staff entry'));
 
-    var entry = myStaffEntry();
+    var entry = window.STAFF_ENTRY || null;
     if (!entry) {
       wrap.appendChild(
         el(
@@ -396,7 +397,65 @@
       ),
     );
 
+    wrap.appendChild(buildOptOut(entry, setStatus));
+
     container.appendChild(wrap);
+  }
+
+  // The opt-out control at the bottom of the edit form. Opting out removes
+  // the entry from the Staff section for everyone (the server drops it from
+  // the model other pages get); the member can still use the app, and this
+  // page — fed their entry regardless — lets them opt back in. Their other
+  // overrides (fields, photo) are kept while opted out.
+  function buildOptOut(entry, setStatus) {
+    var wrap = el('div', 'staff-optout');
+    var note = el('p', 'hint');
+    wrap.appendChild(note);
+    var button = el('button');
+    button.type = 'button';
+    wrap.appendChild(button);
+
+    function sync() {
+      note.textContent = entry.optOut
+        ? 'You are opted out: you don’t appear in the Staff section at all. ' +
+          'You can still use Facecards, and your entry — edits, photo and all — ' +
+          'comes back if you rejoin.'
+        : 'Don’t want to appear in the Staff section? Opting out removes you ' +
+          'from the staff grids and study modes for everyone. You can still ' +
+          'use Facecards, and you can rejoin here any time.';
+      button.textContent = entry.optOut ? 'Include me again' : 'Leave me out of Facecards';
+    }
+    sync();
+
+    button.addEventListener('click', function () {
+      var optingOut = !entry.optOut;
+      if (
+        optingOut &&
+        !confirm('Remove yourself from the Staff section? You can rejoin here any time.')
+      ) {
+        return;
+      }
+      button.disabled = true;
+      setStatus(optingOut ? 'Opting out…' : 'Rejoining…');
+      google.script.run
+        .withSuccessHandler(function (result) {
+          button.disabled = false;
+          entry.optOut = !!(result && result.optOut);
+          sync();
+          setStatus(
+            entry.optOut
+              ? 'Done — you won’t appear in the Staff section.'
+              : 'Welcome back — you’re in the Staff section again.',
+          );
+        })
+        .withFailureHandler(function (err) {
+          button.disabled = false;
+          setStatus(err.message, true);
+        })
+        .saveStaffOptOut(optingOut, asParam());
+    });
+
+    return wrap;
   }
 
   // ---- Photo capture ------------------------------------------------------
@@ -578,14 +637,4 @@
     return input;
   }
 
-  // The viewer's own row in the staff model (matched by ctx.effective, which
-  // the server normalizes to lowercase, as are the scraped emails).
-  function myStaffEntry() {
-    var me = String((window.CTX || {}).effective || '').toLowerCase();
-    var match = null;
-    staffList().forEach(function (p) {
-      if (!match && String(p.email || '').toLowerCase() === me) match = p;
-    });
-    return match;
-  }
 </script>

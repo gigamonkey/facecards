@@ -65,8 +65,10 @@ because the app reads it _as_ that account.
 - **`staff overrides` tab.** Created on the first save from the app's "Edit my
   entry" form — staff members' corrections to their own directory entries,
   including self-taken photos (stored as small JPEG data URLs in the `photo`
-  column). Kept separate from the `staff` tab so re-running
-  `refreshStaffDirectory` never clobbers anyone's edits.
+  column) and the opt-out flag (`optOut` column; opted-out staff appear
+  nowhere in the Staff section but can rejoin from their edit page). Kept
+  separate from the `staff` tab so re-running `refreshStaffDirectory` never
+  clobbers anyone's edits.
 
 ### Photos folder
 

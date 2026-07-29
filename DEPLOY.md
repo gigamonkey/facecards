@@ -62,6 +62,13 @@ because the app reads it _as_ that account.
 - **`staff` tab.** Also generated, not hand-made — `refreshStaffDirectory`
   scrapes the public BHS staff directory into it (see §7). Until it has run,
   the Staff section just shows a "no staff data yet" note.
+- **`aliases` tab (optional).** For staff whose public-directory email is a
+  Workspace alias of their real address: primary (IC/roster) email in the
+  first column, the alias in the second, one pair per row (bare usernames
+  get `@berkeley.net` appended; a header row is harmless). Without a row
+  here, an aliased teacher's directory entry won't match their roster
+  identity — no courses on their card, no photo on the shared pages, and no
+  self-editing. Run `clearCaches` after editing.
 - **`staff overrides` tab.** Created on the first save from the app's "Edit my
   entry" form — staff members' corrections to their own directory entries,
   including self-taken photos (stored as small JPEG data URLs in the `photo`

@@ -13,6 +13,9 @@
  *   - `staff overrides` tab : staff members' corrections to their own entries
  *                  (name/role fields, a self-taken photo as a small JPEG data
  *                  URL, and an opt-out flag), written from the ?staff-edit form
+ *   - `aliases` tab : primary (IC/roster) email in the first column, alias in
+ *                  the second — for staff whose public-directory email is an
+ *                  alias of their login/roster address
  *
  * Photos are surfaced as drive.google.com/thumbnail URLs from the folder named
  * by CONFIG.DRIVE_FOLDER_ID (shared view-only with the domain).
@@ -31,6 +34,7 @@ var MISSING_PHOTOS_SHEET = 'missing photos';
 var LISTS_SHEET = 'lists';
 var STAFF_SHEET = 'staff';
 var STAFF_OVERRIDES_SHEET = 'staff overrides';
+var ALIASES_SHEET = 'aliases';
 
 var STAFF_DIRECTORY_URL = 'https://bhs.berkeleyschools.net/staff/';
 
@@ -804,14 +808,19 @@ function buildStaffModel() {
   return cachedBig('staff', function () {
     var overrides = readStaffOverrides();
     var teachers = getData().teachers; // roster join, for teachers' courses
+    var aliases = readAliases();
     var staff = readStaff().map(function (r) {
-      var o = overrides[normalizeEmail(r.email)];
-      var t = teachers[username(r.email)];
+      // The canonical (primary) email is the identity everywhere: it's what
+      // logins and the roster use, so the overrides, courses, and shared-view
+      // photo joins all line up even when the directory lists an alias.
+      var email = canonicalStaffEmail(r.email, aliases);
+      var o = overrides[email];
+      var t = teachers[username(email)];
       return {
         firstName: String(((o && o.firstName) || r.firstName) || ''),
         lastName: String(((o && o.lastName) || r.lastName) || ''),
         role: String(((o && o.role) || r.role) || ''),
-        email: String(r.email || ''),
+        email: email,
         // A self-taken photo (a data URL in the overrides tab) wins over the
         // scraped directory URL; both are plain <img> srcs to the client.
         photoUrl: String(((o && o.photo) || r.photoUrl) || ''),
@@ -865,7 +874,7 @@ function staffPhotoByUsername() {
  * still sees their entry and can opt back in.
  */
 function staffEntryFor(email) {
-  var target = normalizeEmail(email);
+  var target = canonicalStaffEmail(email, readAliases());
   var match = null;
   buildStaffModel().staff.forEach(function (p) {
     if (!match && normalizeEmail(p.email) === target) match = p;
@@ -1001,12 +1010,13 @@ function saveStaffOptOut(optOut, as) {
   return { optOut: !!optOut };
 }
 
-/** The scraped `staff` tab row for an email, or null. */
+/** The scraped `staff` tab row for an email (either address), or null. */
 function findStaffRow(email) {
-  var target = normalizeEmail(email);
+  var aliases = readAliases();
+  var target = canonicalStaffEmail(email, aliases);
   var found = null;
   readStaff().forEach(function (r) {
-    if (!found && normalizeEmail(r.email) === target) found = r;
+    if (!found && canonicalStaffEmail(r.email, aliases) === target) found = r;
   });
   return found;
 }
@@ -1250,6 +1260,36 @@ function readPhotoMap() {
 }
 
 /**
+ * alias -> primary map from the `aliases` tab (primary/IC address in the
+ * first column, alias in the second; bare usernames get @berkeley.net, and a
+ * header row is harmless — "primary@berkeley.net" matches nobody). Some
+ * staff have Workspace aliases: their login and the roster use the primary
+ * address while the public staff directory lists the alias, so
+ * directory-derived emails must be translated before joining on anything
+ * roster- or login-keyed. Cached; edits to the tab need clearCaches().
+ */
+function readAliases() {
+  return cached('aliases', function () {
+    var sheet = spreadsheet().getSheetByName(ALIASES_SHEET);
+    var map = {};
+    if (sheet) {
+      sheet.getDataRange().getValues().forEach(function (row) {
+        var primary = qualifyEmail(row[0]);
+        var alias = qualifyEmail(row[1]);
+        if (isEmailShaped(primary) && isEmailShaped(alias)) map[alias] = primary;
+      });
+    }
+    return map;
+  });
+}
+
+/** An email translated to its primary form — the app's canonical identity. */
+function canonicalStaffEmail(email, aliases) {
+  var e = normalizeEmail(email);
+  return aliases[e] || e;
+}
+
+/**
  * Lowercased Set of admin emails from the `admins` tab. Reads every cell and
  * keeps anything that resolves to an email — bare usernames get @berkeley.net
  * appended — so the tab can be a plain list of names or full addresses, with or
@@ -1343,7 +1383,10 @@ function resolveViewer(asParam) {
   var actual = normalizeEmail(Session.getActiveUser().getEmail());
   if (!isBerkeleyStaff(actual)) return null;
   var isAdmin = readAdmins().has(actual);
-  var effective = (isAdmin && asParam ? qualifyEmail(asParam) : '') || actual;
+  // Canonicalize an impersonated alias to the primary address, so ?as=
+  // lands on the same identity the roster and the overrides use.
+  var effective =
+    (isAdmin && asParam ? canonicalStaffEmail(qualifyEmail(asParam), readAliases()) : '') || actual;
   return {
     actual: actual,
     effective: effective,

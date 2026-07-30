@@ -73,9 +73,12 @@ and the `*.html` files are pushed.
    for correcting one's own staff entry),
    `?mode=learn|review|browse[&scope=&id=]` (study/browse deep link; `scope=staff`
    studies the staff directory), `?learn` (the class face grids), default
-   (two-box menu). A model with no classes renders `landing.html` ("contact
-   Mr. Seibel") instead. The model + route + context land in `index.html` as
-   JSON (via `<?!= jsonForScript(...) ?>`) for one-shot client rendering.
+   (menu boxes). A viewer with no classes still gets the app (`ctx.hasOwn`
+   false — the client hides the Mine/Shared nav links and menu boxes, leaving
+   the staff cards); only a Mine/student-study deep link renders
+   `landing.html` ("contact Mr. Seibel") instead. The model + route + context
+   land in `index.html` as JSON (via `<?!= jsonForScript(...) ?>`) for
+   one-shot client rendering.
 
 **Caching.** The roster sheet is large, so requests never read it directly:
 `getData()` normalizes the whole roster once into a students+teachers blob, and

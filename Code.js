@@ -56,6 +56,23 @@ function doGet(e) {
   var effective = viewer.effective;
 
   tStep = new Date().getTime();
+  var model = buildModel(effective);
+  logTime('  buildModel', tStep);
+
+  // Custom lists are owner-only even under impersonation: an admin viewing
+  // as the owner gets the owner's classes but not the owner's lists. (Safe to
+  // mutate — cachedBig serialized the model before returning it.)
+  if (!isOwner(viewer.actual)) model.lists = null;
+
+  // Whether the effective viewer has anything of their own to study (sections
+  // or custom lists). Any @berkeley.net viewer gets the app regardless — the
+  // client uses this to hide the Mine/Shared nav links and menu boxes. Built
+  // on every route (the model is cached) so the staff and shared pages can
+  // render the navbar right too.
+  var hasOwn =
+    Object.keys(model.classes).length > 0 || Object.keys(model.lists || {}).length > 0;
+
+  tStep = new Date().getTime();
   var baseUrl = getBaseUrl();
   logTime('  getBaseUrl', tStep);
   var ctx = {
@@ -63,6 +80,7 @@ function doGet(e) {
     effective: viewer.effective,
     impersonating: viewer.impersonating,
     isAdmin: viewer.isAdmin,
+    hasOwn: hasOwn,
     baseUrl: baseUrl,
   };
 
@@ -125,27 +143,6 @@ function doGet(e) {
     return page(se);
   }
 
-  var model = buildModel(effective);
-
-  // Custom lists are owner-only even under impersonation: an admin viewing
-  // as the owner gets the owner's classes but not the owner's lists. (Safe to
-  // mutate — cachedBig serialized the model before returning it.)
-  if (!isOwner(viewer.actual)) model.lists = null;
-
-  // Nothing to show this viewer (no sections and no custom lists) -> landing
-  // page. (The lists guard: a model cached before lists existed lacks the key.
-  // A staff-scope study deep link doesn't need any sections, so it skips this.)
-  if (
-    Object.keys(model.classes).length === 0 &&
-    Object.keys(model.lists || {}).length === 0 &&
-    params.scope !== 'staff'
-  ) {
-    var landing = HtmlService.createTemplateFromFile('landing');
-    landing.ctx = ctx;
-    logTime('doGet landing build', t0);
-    return page(landing);
-  }
-
   var mode;
   if (
     params.mode === 'learn' ||
@@ -156,7 +153,19 @@ function doGet(e) {
   } else if (params.learn !== undefined) {
     mode = 'grid'; // ?learn -> the class face grids
   } else {
-    mode = 'menu'; // default -> two-box menu
+    mode = 'menu'; // default -> the menu boxes
+  }
+
+  // A viewer with nothing of their own still gets the app — the menu offers
+  // the staff cards, with the Mine/Shared chrome hidden client-side — but a
+  // Mine (?learn) or student-study deep link has nothing to show, so those
+  // get the landing page explaining how to get access. (A staff-scope study
+  // deep link doesn't need any sections, so it skips this.)
+  if (!hasOwn && mode !== 'menu' && params.scope !== 'staff') {
+    var landing = HtmlService.createTemplateFromFile('landing');
+    landing.ctx = ctx;
+    logTime('doGet landing build', t0);
+    return page(landing);
   }
   var route = {
     mode: mode,

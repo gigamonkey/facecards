@@ -30,6 +30,13 @@
           &lt;<a href="mailto:peterseibel@berkeley.net">peterseibel@berkeley.net</a>&gt;.
         </p>
 
+        <? if (ctx.baseUrl) { ?>
+        <p>
+          Meanwhile, you can still
+          <a href="<?= ctx.baseUrl ?>?staff" target="_top">learn staff names</a>.
+        </p>
+        <? } ?>
+
         <? if (ctx.isAdmin && ctx.baseUrl) { ?>
         <form id="viewas" action="<?= ctx.baseUrl ?>" method="get" target="_top">
           <label>View as <input name="as" type="text" placeholder="teacher (or full email)" required /></label>

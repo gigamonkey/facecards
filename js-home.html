@@ -39,8 +39,8 @@
 
   // The custom-lists section of the home view: each saved list as a face grid
   // with the same Learn/Review/Browse buttons as a class (plus Delete), then
-  // the form for uploading or pasting a new list. Admin-only — the server
-  // sends model.lists (possibly empty) only for admin viewers, so its absence
+  // the form for uploading or pasting a new list. Owner-only — the server
+  // sends model.lists (possibly empty) only to the app owner, so its absence
   // hides the whole section, form included.
   function renderLists(home, model, onStudy) {
     var lists = model.lists;
@@ -189,7 +189,8 @@
 
   // The ?as= to pass to the write endpoints (lists, staff overrides) so an
   // admin's edits land under the impersonated user (the server re-checks
-  // admin-ness).
+  // admin-ness). The owner-only list endpoints instead reject any
+  // impersonated call — but their UI is never shown while impersonating.
   function asParam() {
     var ctx = window.CTX || {};
     return ctx.impersonating ? ctx.effective : '';

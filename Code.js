@@ -127,6 +127,11 @@ function doGet(e) {
 
   var model = buildModel(effective);
 
+  // Custom lists are owner-only even under impersonation: an admin viewing
+  // as the owner gets the owner's classes but not the owner's lists. (Safe to
+  // mutate — cachedBig serialized the model before returning it.)
+  if (!isOwner(viewer.actual)) model.lists = null;
+
   // Nothing to show this viewer (no sections and no custom lists) -> landing
   // page. (The lists guard: a model cached before lists existed lacks the key.
   // A staff-scope study deep link doesn't need any sections, so it skips this.)
@@ -222,15 +227,17 @@ function buildModelUncached(email) {
 /**
  * The viewer's custom lists from the `lists` tab, keyed by slug (the 'list-'
  * prefix keeps them clear of the class slugs, which start with a username). A
- * list may include any student in the roster, so the feature is gated to
- * admins: for a non-admin email this returns null (no lists key on the wire —
- * the client hides the whole section), which also means an admin impersonating
- * a regular teacher sees exactly what that teacher sees. Numbers no longer in
- * the roster are dropped (nothing to show for them).
+ * list may include any student in the roster, so the feature is gated to the
+ * app owner (the deploying account) — not even other admins: for any other
+ * email this returns null (a null lists key on the wire — the client hides
+ * the whole section), which also means the owner impersonating a teacher sees
+ * exactly what that teacher sees. (doGet additionally strips lists when an
+ * admin impersonates the owner.) Numbers no longer in the roster are dropped
+ * (nothing to show for them).
  */
 function listsFor(data, email) {
   var target = qualifyEmail(email);
-  if (!readAdmins().has(target)) return null; // custom lists are admin-only
+  if (!isOwner(target)) return null; // custom lists are owner-only
   var lists = {};
   readLists().forEach(function (r) {
     var name = String(r.listName || '').trim();
@@ -1082,15 +1089,16 @@ function updateStaffOverride(email, changes) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Custom lists (admin-only)                                           */
+/* Custom lists (owner-only)                                           */
 /*                                                                     */
-/* Admins upload (or paste) a plain-text list of student numbers, one  */
-/* per line — or TSV rows: student number first, other columns kept as */
-/* extra card-back lines. Stored in the `lists` tab as one row per     */
-/* (teacherEmail, listName, studentNumber, extra) and served back as   */
-/* model.lists, studied like a class. Saving replaces any same-named   */
-/* list. Admin-only because a list can name any student in the roster, */
-/* not just the uploader's own.                                        */
+/* The owner uploads (or pastes) a plain-text list of student numbers, */
+/* one per line — or TSV rows: student number first, other columns     */
+/* kept as extra card-back lines. Stored in the `lists` tab as one row */
+/* per (teacherEmail, listName, studentNumber, extra) and served back  */
+/* as model.lists, studied like a class. Saving replaces any           */
+/* same-named list. Gated to the app owner (the deploying account) —   */
+/* not even other admins — because a list can name any student in the  */
+/* roster, not just the uploader's own.                                */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -1099,15 +1107,16 @@ function updateStaffOverride(email, changes) {
  * whose first column is the student number, with the remaining columns kept
  * as extra lines for the back of the student's card. Lines that
  * aren't in the roster (or aren't numbers at all) are skipped and reported
- * back so the client can warn about them. Called via google.script.run; `as`
- * is the client's ?as= param so an admin's edits land under the impersonated
- * user (resolveViewer re-checks admin-ness — a non-admin's `as` is ignored).
- * Admin-only: a list can name any student in the roster, so the effective
- * email must itself be an admin (matching listsFor's read-side gate).
+ * back so the client can warn about them. Called via google.script.run.
+ * Owner-only, matching listsFor's read-side gate: the caller must actually be
+ * the app owner and not impersonating (an impersonated save would write rows
+ * no one could see, and an admin viewing as the owner isn't the owner).
  */
 function saveList(name, text, as) {
   var viewer = resolveViewer(as);
-  if (!viewer || !readAdmins().has(viewer.effective)) throw new Error('Not authorized.');
+  if (!viewer || !isOwner(viewer.actual) || viewer.impersonating) {
+    throw new Error('Not authorized.');
+  }
   var listName = String(name || '').trim();
   if (!listName) throw new Error('The list needs a name.');
 
@@ -1151,10 +1160,12 @@ function saveList(name, text, as) {
   return { saved: entries.length, unknown: unknown, invalid: invalid };
 }
 
-/** Delete one of the calling admin's custom lists (same gate as saveList). */
+/** Delete one of the owner's custom lists (same gate as saveList). */
 function deleteList(name, as) {
   var viewer = resolveViewer(as);
-  if (!viewer || !readAdmins().has(viewer.effective)) throw new Error('Not authorized.');
+  if (!viewer || !isOwner(viewer.actual) || viewer.impersonating) {
+    throw new Error('Not authorized.');
+  }
   rewriteLists(viewer.effective, String(name || '').trim(), []);
   invalidateModel(viewer.effective);
   return true;
@@ -1369,6 +1380,20 @@ function isEmailShaped(s) {
 
 function isBerkeleyStaff(email) {
   return /@berkeley\.net$/.test(email);
+}
+
+/**
+ * The app owner: the deploying account. The web app runs with
+ * `executeAs: USER_DEPLOYING`, so the effective user of every request is the
+ * deployer — no configuration needed. (Editor runs execute as whoever's at
+ * the keyboard, but only the owner can open this project's editor.)
+ */
+function ownerEmail() {
+  return normalizeEmail(Session.getEffectiveUser().getEmail());
+}
+
+function isOwner(email) {
+  return qualifyEmail(email) === ownerEmail();
 }
 
 /**

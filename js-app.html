@@ -138,15 +138,54 @@
       return 'All my students';
     }
 
+    // A card's identity across sessions, for saved progress: students by
+    // student number, staff by canonical email (with a name fallback for the
+    // odd directory row with no email).
+    function cardKey(scope, s) {
+      if (scope === 'staff') return s.email || s.firstName + ' ' + s.lastName;
+      return s.studentNumber;
+    }
+
+    // Saved deck progress: the keys of the cards the viewer has retired, in
+    // localStorage so it survives reloads — big decks (all staff) take many
+    // sittings. Keyed by viewer + mode + deck; the staff filter is
+    // deliberately not part of the key, so staff retired while studying one
+    // filter stay retired under any other. Best-effort only: the sandbox
+    // origin (script.googleusercontent.com) can change over time, and some
+    // browsers block storage in the iframe entirely — then study just starts
+    // fresh every time, as before.
+    function progressKey(mode, scope, id) {
+      return 'facecards:' + (CTX.effective || '') + ':' + mode + ':' + scope + ':' + (id || '');
+    }
+
+    function loadRetired(key) {
+      try {
+        return JSON.parse(localStorage.getItem(key)) || [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function saveRetired(key, keys) {
+      try {
+        localStorage.setItem(key, JSON.stringify(keys));
+      } catch (e) {
+        /* storage blocked or full — progress just isn't saved */
+      }
+    }
+
     function showStudy(mode, scope, id) {
       clearStudy();
       var students = studentsFor(scope, id);
       // Staff flashcards are the face: with no photo there's nothing to
-      // learn, so Learn and Review leave out photo-less staff. (Browse keeps
-      // everyone — it's for reading the directory, not quizzing.)
+      // learn, so Learn and Review leave out photo-less staff — and the
+      // viewer's own card, since nobody needs to learn their own name.
+      // (Browse keeps everyone — it's for reading the directory, not
+      // quizzing.)
       if (scope === 'staff' && mode !== 'browse') {
+        var self = String(CTX.effective || '').toLowerCase();
         students = students.filter(function (p) {
-          return p.photoUrl;
+          return p.photoUrl && String(p.email || '').toLowerCase() !== self;
         });
       }
       if (!students.length) {
@@ -192,8 +231,37 @@
       });
 
       var state = mode === 'learn' ? new LearnState(cards) : new ReviewState(cards);
-      teardownStudy = runStudy(state, current, function () {
-        showStudy(mode, scope, id); // same set, same mode, fresh state
+
+      // Restore saved progress: cards retired in an earlier session start
+      // graduated. The saved set may hold keys outside this deck (a
+      // different staff filter) — those are kept, untouched, on every save.
+      var storeKey = progressKey(mode, scope, id);
+      var keys = new Map(); // card element -> stable identity
+      cards.forEach(function (card, i) {
+        keys.set(card, cardKey(scope, students[i]));
+      });
+      var retired = new Set(loadRetired(storeKey));
+      cards.forEach(function (card) {
+        if (retired.has(keys.get(card))) state.restore(card);
+      });
+
+      teardownStudy = runStudy(state, current, {
+        onAnswer: function () {
+          // Re-sync this deck's cards into the saved set (a miss can
+          // un-retire a card, so removal matters as much as addition).
+          cards.forEach(function (card) {
+            if (state.graduated.indexOf(card) !== -1) retired.add(keys.get(card));
+            else retired.delete(keys.get(card));
+          });
+          saveRetired(storeKey, Array.from(retired));
+        },
+        onRestart: function () {
+          cards.forEach(function (card) {
+            retired.delete(keys.get(card));
+          });
+          saveRetired(storeKey, Array.from(retired));
+          showStudy(mode, scope, id); // same set, same mode, fresh state
+        },
       });
       if (scope === 'staff') {
         preloadStaffPhotos(students);
@@ -329,6 +397,9 @@
         '<p><strong>Review</strong> is a quicker check that you still remember ' +
         'everyone: get them all right and it’s a single pass, but anyone you ' +
         'miss drops back into the Learn schedule until you’ve relearned them.</p>' +
+        '<p>The bar at the bottom shows how many cards you’ve fully learned. ' +
+        'Progress is saved on this device, so a big deck can take several ' +
+        'sittings — <strong>Start over</strong> clears it and begins again.</p>' +
         '<h3>Browse</h3>' +
         '<p>Just shows the students one at a time — picture, name, and schedule — ' +
         (mobile ? 'swipe left and right' : 'use the arrow keys') +

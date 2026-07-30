@@ -38,6 +38,7 @@
     this.unseen = shuffled(cards);
     this.active = []; // seen but not yet graduated
     this.graduated = [];
+    this.total = cards.length;
     this.remaining = cards.length; // active + unseen
     this.trial = 0;
     this.lastCard = null;
@@ -54,6 +55,18 @@
       Math.max(2 * LEARN_START_S, 2 * (cards.length - 1)),
     );
   }
+
+  // A card retired in an earlier session (per saved progress) enters play
+  // already graduated: it can be dealt back in as a spacer, and missing it
+  // un-graduates it like any other spacer.
+  LearnState.prototype.restore = function (card) {
+    var i = this.unseen.indexOf(card);
+    if (i === -1) return;
+    this.unseen.splice(i, 1);
+    this.memory.set(card, { s: this.graduationBar, askedAt: 0, askedW: 0 });
+    this.graduated.push(card);
+    this.remaining--;
+  };
 
   LearnState.prototype.urgency = function (card) {
     var m = this.memory.get(card);
@@ -150,6 +163,8 @@
   };
 
   LearnState.prototype.doneMessage = function () {
+    // A deck fully retired by saved progress ends before a card is dealt.
+    if (this.trial === 0) return 'Everyone already learned!';
     return 'Done!' + (this.misses === 0 ? ' Perfect run!' : '');
   };
 </script>

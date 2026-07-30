@@ -3,20 +3,62 @@
   // from public/js/learn.js and public/js/review.js). First input reveals the
   // card back; when the back is showing, left = wrong, right = correct.
   // Advances via arrow keys or touch swipes. Returns a teardown() that removes
-  // the listeners so leaving study mode doesn't hijack the home view. onRedo,
-  // if given, gets a Redo button on the done screen that restarts the session.
-  function runStudy(state, currentEl, onRedo) {
+  // the listeners so leaving study mode doesn't hijack the home view.
+  //
+  // opts.onRestart, if given, gets a Redo button on the done screen and a
+  // Start over button in the progress bar (the latter behind a confirm) —
+  // both discard the deck's saved progress and restart the session.
+  // opts.onAnswer is called after each graded answer, so the caller can
+  // persist the deck's progress.
+  function runStudy(state, currentEl, opts) {
+    opts = opts || {};
     var current = null;
 
+    // The retired-cards progress bar, fixed to the bottom of the screen.
+    var progress = el('div');
+    progress.id = 'study-progress';
+    var track = el('div', 'track');
+    var fill = el('div', 'fill');
+    track.appendChild(fill);
+    progress.appendChild(track);
+    var count = el('span', 'count');
+    progress.appendChild(count);
+    if (opts.onRestart) {
+      var reset = el('button', 'reset', 'Start over');
+      reset.type = 'button';
+      reset.addEventListener('click', function () {
+        if (confirm('Start over? This discards your saved progress with these cards.')) {
+          opts.onRestart();
+        }
+      });
+      progress.appendChild(reset);
+    }
+    // Taps on the bar are button presses, not study gestures — don't let them
+    // bubble to the body's swipe handlers and flip the card.
+    progress.addEventListener('touchstart', function (e) {
+      e.stopPropagation();
+    });
+    progress.addEventListener('touchend', function (e) {
+      e.stopPropagation();
+    });
+    document.body.appendChild(progress);
+
+    function updateProgress() {
+      var retired = state.total - state.remaining;
+      fill.style.width = (state.total ? (100 * retired) / state.total : 0) + '%';
+      count.textContent = retired + ' / ' + state.total;
+    }
+
     function advance() {
+      updateProgress();
       current = state.next();
       if (current === null) {
         var done = el('div', 'study-done');
         done.appendChild(el('p', null, state.doneMessage ? state.doneMessage() : 'Done!'));
-        if (onRedo) {
+        if (opts.onRestart) {
           var redo = el('button', null, 'Redo');
           redo.type = 'button';
-          redo.addEventListener('click', onRedo);
+          redo.addEventListener('click', opts.onRestart);
           done.appendChild(redo);
         }
         currentEl.replaceChildren(done);
@@ -36,6 +78,7 @@
         else if (direction === 'right') state.correct(current);
         else return; // no swipe/neutral key: leave the back showing
         back.style.display = 'none';
+        if (opts.onAnswer) opts.onAnswer();
         advance();
       }
     }
@@ -74,6 +117,7 @@
       document.body.removeEventListener('touchend', onTouchEnd);
       document.removeEventListener('touchmove', onTouchMove, { passive: false });
       window.removeEventListener('keydown', onKeyDown);
+      progress.remove();
     };
   }
 </script>

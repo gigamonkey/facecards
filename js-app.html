@@ -46,13 +46,6 @@
       window.scrollTo(0, 0);
     }
 
-    function showStaffEdit() {
-      clearStudy();
-      setView('staff-edit');
-      renderStaffEdit(app);
-      window.scrollTo(0, 0);
-    }
-
     // The default landing view: boxes linking to the grids (?learn), the
     // shared overview (?shared), and the staff cards (?staff). The student
     // boxes only show for viewers with students of their own (CTX.hasOwn) —
@@ -384,8 +377,8 @@
           : '') +
         '<p><strong>Staff</strong> is the BHS staff directory — learn or browse your ' +
         'colleagues’ faces the same way, with a filter to study just one department ' +
-        'or role. If your own listing is wrong, “Edit my entry” on the Staff page ' +
-        'fixes it.</p>' +
+        'or role. If your own listing is wrong, contact Mr. Seibel to get it ' +
+        'fixed.</p>' +
         (CTX.hasOwn ? '<h2>On the Mine page</h2>' : '<h2>Studying the cards</h2>') +
         '<h3>Learn and Review</h3>' +
         '<p>' +
@@ -435,8 +428,6 @@
       window.scrollTo(0, 0);
     } else if (ROUTE.mode === 'staff') {
       showStaff();
-    } else if (ROUTE.mode === 'staff-edit') {
-      showStaffEdit();
     } else if (
       ROUTE.mode === 'learn' ||
       ROUTE.mode === 'review' ||

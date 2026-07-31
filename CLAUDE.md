@@ -69,8 +69,7 @@ and the `*.html` files are pushed.
    also carries their full cross-teacher `schedule` (for browse mode).
 4. Routes by query param: `?shared-with=<teacher>` (students shared with that
    teacher), `?shared` (overview of all sharing teachers), `?staff` (the
-   scraped BHS staff directory — same for every viewer), `?staff-edit` (a form
-   for correcting one's own staff entry),
+   scraped BHS staff directory — same for every viewer),
    `?mode=learn|review|browse[&scope=&id=]` (study/browse deep link; `scope=staff`
    studies the staff directory), `?learn` (the class face grids), default
    (menu boxes). A viewer with no classes still gets the app (`ctx.hasOwn`
@@ -119,19 +118,14 @@ scans `CONFIG.DRIVE_FOLDER_ID` for `<studentNumber>.jpg` files, writes the
   locally to TSV (see DEPLOY.md). `buildStaffModel()` also joins each entry
   to the roster's teachers by email username, adding the distinct `courses`
   they teach (shown on the staff cards).
-- `staff overrides` — staff members' corrections to their own entries
-  (`email`, `firstName`, `lastName`, `role`, `photo`, `optOut`), written from
-  the `?staff-edit` form (`saveStaffOverride`, `saveStaffPhoto`,
-  `removeStaffPhoto`, `saveStaffOptOut`; `updateStaffOverride` does the
-  merging rewrite). An opted-out member is dropped from `publicStaffModel()`
-  — absent from every viewer-facing route — but `?staff-edit` resolves the
-  viewer's entry from the full model (`staffEntryFor`, sent as
-  `window.STAFF_ENTRY`), so they can rejoin. The
-  `photo` column holds a self-taken 172x228 JPEG as a data URL (a file-input
-  picker + canvas crop — getUserMedia can't work in Google's iframe, which
-  doesn't delegate camera permission; crop/confirm flow borrowed from
-  gigamonkey/photobooth), which the model serves as the entry's `photoUrl`. Merged over the scraped rows in `buildStaffModel()` (non-empty
-  cell wins, per field), so a directory re-scrape never clobbers an edit.
+- `staff overrides` — corrections to staff entries (`email`, `firstName`,
+  `lastName`, `role`, `photo`, `optOut`), edited by hand in the spreadsheet
+  (there is no in-app edit form; run `clearCaches()` after). An opted-out
+  member (non-empty `optOut`) is dropped from `publicStaffModel()` — absent
+  from every viewer-facing route. The `photo` column holds an image URL or a
+  small JPEG data URL, which the model serves as the entry's `photoUrl`.
+  Merged over the scraped rows in `buildStaffModel()` (non-empty cell wins,
+  per field), so a directory re-scrape never clobbers an edit.
 
 **Client.** `index.html` bootstraps `window.MODEL/ROUTE/CTX/SHARED` then
 includes, in order: `js-dom` (`$`, `$$`, `el`, `appUrl`, `helpOpen`) →
@@ -148,8 +142,7 @@ name/courses/shared-count, photos joined server-side from the public
 staff model — the desktop shared-with table, and the mobile swipe
 carousel; `runCarousel`, reused by browse) → `js-staff`
 (the staff directory: filterable face grid, staff flash/browse cards — plain
-`<img>`s to the public photo URLs, no Drive proxy machinery — and the
-`?staff-edit` self-edit form) → `js-app`
+`<img>`s to the public photo URLs, no Drive proxy machinery) → `js-app`
 (controller: view dispatch, deep links, the navbar — Home / Mine / Shared /
 Staff, admin view-as form and impersonation banner — and the help overlay).
 

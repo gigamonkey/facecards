@@ -654,6 +654,9 @@
     width: 220px;
     max-width: 60%;
     height: auto;
+    /* The QR service can't render a transparent background; multiply makes
+       the image's white pixels take the page color instead. */
+    mix-blend-mode: multiply;
   }
   .menu-qr p {
     margin-top: 0.5em;

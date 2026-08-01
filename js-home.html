@@ -135,7 +135,9 @@
     save.type = 'submit';
     form.appendChild(save);
 
-    var status = el('p', 'list-status');
+    // A div, not a p: the skipped-lines report below nests a list and a
+    // button inside it.
+    var status = el('div', 'list-status');
 
     function send(listName, text) {
       if (!text.trim()) {
@@ -147,19 +149,32 @@
       google.script.run
         .withSuccessHandler(function (result) {
           var skipped = (result.unknown || []).concat(result.invalid || []);
-          if (skipped.length) {
-            alert(
-              'Saved ' +
-                result.saved +
-                ' students to “' +
-                listName +
-                '”.\n\nSkipped ' +
-                skipped.length +
-                ' lines that aren’t roster student numbers:\n' +
-                skipped.join('\n'),
-            );
+          if (!skipped.length) {
+            reloadHome();
+            return;
           }
-          reloadHome();
+          // The save landed but some lines didn't: report them inline and
+          // hold the reload (which would wipe the report) until OK is
+          // clicked -- a real gesture, so the sandbox always allows that
+          // navigation.
+          save.disabled = false;
+          status.textContent =
+            'Saved ' +
+            result.saved +
+            ' students to “' +
+            listName +
+            '”. Skipped ' +
+            skipped.length +
+            ' lines that aren’t roster student numbers:';
+          var lines = el('ul');
+          skipped.forEach(function (line) {
+            lines.appendChild(el('li', null, line));
+          });
+          status.appendChild(lines);
+          var ok = el('button', null, 'OK');
+          ok.type = 'button';
+          ok.addEventListener('click', reloadHome);
+          status.appendChild(ok);
         })
         .withFailureHandler(function (err) {
           save.disabled = false;

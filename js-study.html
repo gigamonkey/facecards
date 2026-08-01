@@ -5,9 +5,13 @@
   // Advances via arrow keys or touch swipes. Returns a teardown() that removes
   // the listeners so leaving study mode doesn't hijack the home view.
   //
-  // opts.onRestart, if given, gets a Redo button on the done screen and a
-  // Start over button in the progress bar — both discard the deck's saved
-  // progress and restart the session.
+  // opts.onRestart, if given, gets a restart button on the done screen
+  // (labeled opts.restartLabel, default 'Redo') and a Start over button in
+  // the progress bar — both discard the deck's saved progress and restart
+  // the session.
+  // opts.onStudyMissed, if given, adds 'Learn missed' / 'Review missed'
+  // buttons to the done screen when any cards were missed; it gets the mode
+  // ('learn' | 'review') and the missed cards.
   // opts.onAnswer is called after each graded answer, so the caller can
   // persist the deck's progress.
   function runStudy(state, currentEl, opts) {
@@ -53,12 +57,27 @@
       if (current === null) {
         var done = el('div', 'study-done');
         done.appendChild(el('p', null, state.doneMessage ? state.doneMessage() : 'Done!'));
+        var buttons = el('div', 'done-buttons');
         if (opts.onRestart) {
-          var redo = el('button', null, 'Redo');
+          var redo = el('button', null, opts.restartLabel || 'Redo');
           redo.type = 'button';
           redo.addEventListener('click', opts.onRestart);
-          done.appendChild(redo);
+          buttons.appendChild(redo);
         }
+        if (opts.onStudyMissed && state.missed && state.missed.length > 0) {
+          [
+            ['learn', 'Learn missed'],
+            ['review', 'Review missed'],
+          ].forEach(function (pair) {
+            var b = el('button', null, pair[1]);
+            b.type = 'button';
+            b.addEventListener('click', function () {
+              opts.onStudyMissed(pair[0], state.missed.slice());
+            });
+            buttons.appendChild(b);
+          });
+        }
+        if (buttons.children.length > 0) done.appendChild(buttons);
         currentEl.replaceChildren(done);
       } else {
         loadCardImage(current); // fetch this card's photo only now that it's shown

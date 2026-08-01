@@ -42,7 +42,7 @@
     this.remaining = cards.length; // active + unseen
     this.trial = 0;
     this.lastCard = null;
-    this.misses = 0;
+    this.missed = []; // cards missed at least once, for the done-screen drills
     this.memory = new Map(); // card -> { s, askedAt, askedW }
     // Stability a card enters play with. Review mode overrides this with the
     // graduation bar (an optimistic prior: "you probably know these"), so a
@@ -161,7 +161,7 @@
 
   LearnState.prototype.incorrect = function (card) {
     this.memory.get(card).s = LEARN_START_S;
-    this.misses++;
+    if (this.missed.indexOf(card) === -1) this.missed.push(card);
     // A missed spacer wasn't learned after all: un-graduate it.
     var i = this.graduated.indexOf(card);
     if (i !== -1) {
@@ -174,6 +174,6 @@
   LearnState.prototype.doneMessage = function () {
     // A deck fully retired by saved progress ends before a card is dealt.
     if (this.trial === 0) return 'Everyone already learned!';
-    return 'Done!' + (this.misses === 0 ? ' Perfect run!' : '');
+    return 'Done!' + (this.missed.length === 0 ? ' Perfect run!' : '');
   };
 </script>

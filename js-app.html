@@ -167,9 +167,12 @@
       }
     }
 
-    function showStudy(mode, scope, id) {
+    // missed, if given, is a subset of the deck's students (the ones missed
+    // in the session that just ended): study those instead, as a one-off
+    // drill that neither restores nor writes the deck's saved progress.
+    function showStudy(mode, scope, id, missed) {
       clearStudy();
-      var students = studentsFor(scope, id);
+      var students = missed || studentsFor(scope, id);
       // Staff flashcards are the face: with no photo there's nothing to
       // learn, so Learn and Review leave out photo-less staff — and the
       // viewer's own card, since nobody needs to learn their own name.
@@ -204,7 +207,7 @@
 
       var header = el('h1');
       header.id = 'study-header';
-      header.textContent = titleFor(mode, scope, id);
+      header.textContent = titleFor(mode, scope, id) + (missed ? ' — missed' : '');
 
       var current = el('div');
       current.id = 'current';
@@ -228,33 +231,54 @@
       // Restore saved progress: cards retired in an earlier session start
       // graduated. The saved set may hold keys outside this deck (a
       // different staff filter) — those are kept, untouched, on every save.
-      var storeKey = progressKey(mode, scope, id);
+      // A missed drill has no storeKey: it starts fresh and saves nothing.
+      var storeKey = missed ? null : progressKey(mode, scope, id);
       var keys = new Map(); // card element -> stable identity
+      var byCard = new Map(); // card element -> its student, for missed drills
       cards.forEach(function (card, i) {
         keys.set(card, cardKey(scope, students[i]));
+        byCard.set(card, students[i]);
       });
-      var retired = new Set(loadRetired(storeKey));
+      var retired = new Set(storeKey ? loadRetired(storeKey) : []);
       cards.forEach(function (card) {
         if (retired.has(keys.get(card))) state.restore(card);
       });
 
       teardownStudy = runStudy(state, current, {
-        onAnswer: function () {
-          // Re-sync this deck's cards into the saved set (a miss can
-          // un-retire a card, so removal matters as much as addition).
-          cards.forEach(function (card) {
-            if (state.graduated.indexOf(card) !== -1) retired.add(keys.get(card));
-            else retired.delete(keys.get(card));
-          });
-          saveRetired(storeKey, Array.from(retired));
-        },
+        onAnswer: storeKey
+          ? function () {
+              // Re-sync this deck's cards into the saved set (a miss can
+              // un-retire a card, so removal matters as much as addition).
+              cards.forEach(function (card) {
+                if (state.graduated.indexOf(card) !== -1) retired.add(keys.get(card));
+                else retired.delete(keys.get(card));
+              });
+              saveRetired(storeKey, Array.from(retired));
+            }
+          : null,
         onRestart: function () {
-          cards.forEach(function (card) {
-            retired.delete(keys.get(card));
-          });
-          saveRetired(storeKey, Array.from(retired));
-          showStudy(mode, scope, id); // same set, same mode, fresh state
+          if (storeKey) {
+            cards.forEach(function (card) {
+              retired.delete(keys.get(card));
+            });
+            saveRetired(storeKey, Array.from(retired));
+          }
+          showStudy(mode, scope, id, missed); // same set, same mode, fresh state
         },
+        restartLabel: mode === 'review' ? 'Review again' : 'Learn again',
+        onStudyMissed:
+          mode === 'review'
+            ? function (newMode, missedCards) {
+                showStudy(
+                  newMode,
+                  scope,
+                  id,
+                  missedCards.map(function (card) {
+                    return byCard.get(card);
+                  }),
+                );
+              }
+            : null,
       });
       if (scope === 'staff') {
         preloadStaffPhotos(students);

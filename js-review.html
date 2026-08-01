@@ -5,11 +5,15 @@
   // a correct answer confirms the prior and graduates the card on the spot —
   // get everything right and the session is a single shuffled pass. A miss
   // resets stability just like any Learn miss, dropping that card into the
-  // normal spaced-repetition schedule until it re-earns graduation.
+  // normal spaced-repetition schedule until it re-earns graduation. The same
+  // prior flips where spacers come from: right after a miss, Review deals
+  // from the deck (unseen cards are presumed known, so they beat re-showing
+  // a card just confirmed) instead of Learn's graduated-card spacers.
 
   function ReviewState(cards) {
     var state = new LearnState(cards);
     state.priorS = state.graduationBar;
+    state.spacersFromDeck = true;
     return state; // a constructor returning an object makes `new` yield it
   }
 </script>

@@ -16,6 +16,13 @@ resets stability to `LEARN_START_S` like any other miss, so a missed card
 falls into the normal Learn schedule below. All the knobs therefore apply
 to Review too, and only to its missed cards.
 
+The prior also flips where spacers come from (`spacersFromDeck`): when a
+fresh miss needs a spacer and the missed card is the only active card,
+Review deals an unseen card from the deck — its prior says unseen cards are
+already known, so they make better spacers than re-showing a card just
+confirmed. Learn keeps the opposite order (graduated cards first), so a
+miss never pulls new material into the pool.
+
 ## LEARN_START_S (currently 1)
 
 The stability of a brand-new card, and what a miss resets stability to. With
@@ -73,6 +80,9 @@ urgency reaches this value. It is *defined* as the urgency a just-missed
 card has one trial after the miss (`1 - 2^(-1/LEARN_START_S)`, i.e. 0.5
 today) so that a fresh miss always blocks new material: after any miss the
 next card is existing material and the missed card follows close behind.
+(In Review the "existing material" half is deliberately waived via
+`spacersFromDeck` — see above — but the missed card still follows close
+behind.)
 
 If you want to change introduction pacing, don't replace the formula with a
 bare number — you'll silently lose that guarantee. Change the inputs
@@ -92,8 +102,10 @@ decks):
 - No card is dealt twice in a row (except a 1-card deck, where it's
   unavoidable).
 
-- No new card immediately after a miss (except the session's second card,
-  when the missed first card is the only thing in play).
+- Learn only: no new card immediately after a miss (except the session's
+  second card, when the missed first card is the only thing in play). In
+  Review the opposite holds: while the deck lasts, the spacer after a miss
+  is an unseen card, never one already answered correctly.
 
 - Per-card gaps stretch as a card accumulates correct answers.
 

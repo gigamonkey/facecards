@@ -49,6 +49,12 @@
     // correct first answer graduates the card on the spot while a miss drops
     // it into the normal schedule.
     this.priorS = LEARN_START_S;
+    // Where next() finds a spacer when the just-answered card is the only
+    // active card: Learn re-shows a graduated card, so a miss never pulls in
+    // new material; Review overrides this to deal from the deck, since its
+    // prior says unseen cards are already known -- better spacers than cards
+    // just confirmed.
+    this.spacersFromDeck = false;
     // A deck can't produce gaps longer than the number of other cards in it.
     this.graduationBar = Math.min(
       LEARN_GRADUATED_S,
@@ -132,9 +138,12 @@
 
     // Re-ask an active card (never the one just answered). When the card
     // just answered is the only active card, fall back to anything else in
-    // play -- a graduated spacer or a new card -- before re-dealing it
-    // back-to-back.
-    var pick = this.sample(this.active) || this.sample(this.graduated);
+    // play -- per spacersFromDeck, a graduated spacer or a new card --
+    // before re-dealing it back-to-back.
+    var pick = this.sample(this.active);
+    if (!pick && this.spacersFromDeck && this.unseen.length > 0)
+      pick = this.unseen.pop();
+    if (!pick) pick = this.sample(this.graduated);
     if (!pick && this.unseen.length > 0) pick = this.unseen.pop();
     return this.deal(pick || this.lastCard);
   };

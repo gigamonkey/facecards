@@ -266,19 +266,16 @@
           showStudy(mode, scope, id, missed); // same set, same mode, fresh state
         },
         restartLabel: mode === 'review' ? 'Review again' : 'Learn again',
-        onStudyMissed:
-          mode === 'review'
-            ? function (newMode, missedCards) {
-                showStudy(
-                  newMode,
-                  scope,
-                  id,
-                  missedCards.map(function (card) {
-                    return byCard.get(card);
-                  }),
-                );
-              }
-            : null,
+        onStudyMissed: function (newMode, missedCards) {
+          showStudy(
+            newMode,
+            scope,
+            id,
+            missedCards.map(function (card) {
+              return byCard.get(card);
+            }),
+          );
+        },
       });
       if (scope === 'staff') {
         preloadStaffPhotos(students);

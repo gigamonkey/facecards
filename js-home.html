@@ -60,7 +60,9 @@
             confirmDialog('Delete the list “' + list.name + '”?', 'Delete', function () {
               status.textContent = 'Deleting…';
               google.script.run
-                .withSuccessHandler(reloadHome)
+                .withSuccessHandler(function () {
+                  reloadHome(status);
+                })
                 .withFailureHandler(function (err) {
                   status.textContent = err.message;
                 })
@@ -150,7 +152,7 @@
         .withSuccessHandler(function (result) {
           var skipped = (result.unknown || []).concat(result.invalid || []);
           if (!skipped.length) {
-            reloadHome();
+            reloadHome(status);
             return;
           }
           // The save landed but some lines didn't: report them inline and
@@ -173,7 +175,9 @@
           status.appendChild(lines);
           var ok = el('button', null, 'OK');
           ok.type = 'button';
-          ok.addEventListener('click', reloadHome);
+          ok.addEventListener('click', function () {
+            reloadHome(status);
+          });
           status.appendChild(ok);
         })
         .withFailureHandler(function (err) {
@@ -216,17 +220,18 @@
   }
 
   // Full reload of the Mine page after a list edit — the invalidated model
-  // rebuilds server-side with the change.
-  function reloadHome() {
+  // rebuilds server-side with the change. status is the caller's inline
+  // status element, for when the reload can't happen: the sandbox refuses
+  // top navigation once the click's user activation has expired (a slow
+  // round-trip). The edit did land — the user just needs a fresh page, and
+  // their next tap is a real gesture.
+  function reloadHome(status) {
     var ctx = window.CTX || {};
     try {
       if (ctx.baseUrl) window.top.location.href = appUrl('?learn');
       else location.reload();
     } catch (err) {
-      // The sandbox refuses top navigation once the click's user activation
-      // has expired (a slow save). The edit did land — the user just needs a
-      // fresh page, and their next tap is a real gesture.
-      alert('Saved. Tap Mine to see the change.');
+      status.textContent = 'Saved. Tap Mine to see the change.';
     }
   }
 

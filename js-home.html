@@ -54,19 +54,22 @@
         var list = lists[slug];
 
         var head = classHead(list.name, onStudy, 'list', slug);
+        var status = el('p', 'list-status'); // per-list: delete progress/errors
         head.querySelector('.buttons').appendChild(
           studyLink('Delete', function () {
             confirmDialog('Delete the list “' + list.name + '”?', 'Delete', function () {
+              status.textContent = 'Deleting…';
               google.script.run
                 .withSuccessHandler(reloadHome)
                 .withFailureHandler(function (err) {
-                  alert(err.message);
+                  status.textContent = err.message;
                 })
                 .deleteList(list.name, asParam());
             });
           }),
         );
         home.appendChild(head);
+        home.appendChild(status);
 
         // A big list's grid would dwarf the classes above it — past 35
         // students just say how many (the study modes still work on it).

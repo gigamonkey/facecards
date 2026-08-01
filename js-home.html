@@ -56,13 +56,14 @@
         var head = classHead(list.name, onStudy, 'list', slug);
         head.querySelector('.buttons').appendChild(
           studyLink('Delete', function () {
-            if (!confirm('Delete the list “' + list.name + '”?')) return;
-            google.script.run
-              .withSuccessHandler(reloadHome)
-              .withFailureHandler(function (err) {
-                alert(err.message);
-              })
-              .deleteList(list.name, asParam());
+            confirmDialog('Delete the list “' + list.name + '”?', 'Delete', function () {
+              google.script.run
+                .withSuccessHandler(reloadHome)
+                .withFailureHandler(function (err) {
+                  alert(err.message);
+                })
+                .deleteList(list.name, asParam());
+            });
           }),
         );
         home.appendChild(head);

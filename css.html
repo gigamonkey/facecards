@@ -455,6 +455,45 @@
     cursor: pointer;
   }
 
+  /* In-page confirm dialog (confirmDialog in js-dom). */
+  .confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1em;
+  }
+  .confirm-box {
+    background: #fff;
+    border-radius: 10px;
+    max-width: 22em;
+    width: 100%;
+    padding: 1.5em;
+    text-align: left;
+  }
+  .confirm-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6em;
+    margin-top: 1.2em;
+  }
+  .confirm-buttons button {
+    font: inherit;
+    padding: 4px 12px;
+    border: 1px solid grey;
+    border-radius: 6px;
+    background: #ddf;
+    cursor: pointer;
+  }
+  .confirm-buttons .confirm-go {
+    border-color: #a33;
+    background: #c0392b;
+    color: #fff;
+  }
+
   /* ---- Shared-with table view ---- */
   body.view-shared {
     width: 90%;

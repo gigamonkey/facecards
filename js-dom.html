@@ -23,11 +23,53 @@
     return e;
   }
 
-  // True while the help overlay is open. The study/carousel input drivers
-  // listen at the document level, so without this guard a tap or key aimed at
-  // the overlay would also drive the cards behind it.
+  // True while a modal overlay (help or a confirm dialog) is open. The
+  // study/carousel input drivers listen at the document level, so without
+  // this guard a tap or key aimed at the overlay would also drive the cards
+  // behind it.
   function helpOpen() {
-    return !!document.querySelector('.help-overlay.show');
+    return !!document.querySelector('.help-overlay.show, .confirm-overlay');
+  }
+
+  // In-page replacement for window.confirm (the app lives in Apps Script's
+  // cross-origin sandbox iframe, where native dialogs are on Chrome's
+  // removal list). Shows message over the page with a Cancel button and a
+  // destructive-styled button labeled confirmLabel that runs onConfirm.
+  // Cancel, Escape, or a backdrop click dismisses without running it.
+  function confirmDialog(message, confirmLabel, onConfirm) {
+    var overlay = el('div', 'confirm-overlay');
+    var box = el('div', 'confirm-box');
+    box.appendChild(el('p', null, message));
+
+    var buttons = el('div', 'confirm-buttons');
+    var cancel = el('button', null, 'Cancel');
+    cancel.type = 'button';
+    var go = el('button', 'confirm-go', confirmLabel);
+    go.type = 'button';
+    buttons.appendChild(cancel);
+    buttons.appendChild(go);
+    box.appendChild(buttons);
+    overlay.appendChild(box);
+
+    function close() {
+      document.removeEventListener('keydown', onKey);
+      overlay.remove();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') close();
+    }
+    cancel.addEventListener('click', close);
+    go.addEventListener('click', function () {
+      close();
+      onConfirm();
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) close();
+    });
+    document.addEventListener('keydown', onKey);
+
+    document.body.appendChild(overlay);
+    cancel.focus();
   }
 
   // Build a full-page app URL from a query string ('' | '?learn' | ...),

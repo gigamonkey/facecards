@@ -6,8 +6,8 @@
   // the listeners so leaving study mode doesn't hijack the home view.
   //
   // opts.onRestart, if given, gets a Redo button on the done screen and a
-  // Start over button in the progress bar (the latter behind a confirm) —
-  // both discard the deck's saved progress and restart the session.
+  // Start over button in the progress bar — both discard the deck's saved
+  // progress and restart the session.
   // opts.onAnswer is called after each graded answer, so the caller can
   // persist the deck's progress.
   function runStudy(state, currentEl, opts) {
@@ -27,9 +27,7 @@
       var reset = el('button', 'reset', 'Start over');
       reset.type = 'button';
       reset.addEventListener('click', function () {
-        if (confirm('Start over? This discards your saved progress with these cards.')) {
-          opts.onRestart();
-        }
+        opts.onRestart();
       });
       progress.appendChild(reset);
     }

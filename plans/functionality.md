@@ -11,21 +11,25 @@ live; unchecked items are planned.
 - [x] Each teacher sees only the sections they teach (other teachers' data is
       never sent to the browser)
 
-- [x] `@berkeley.net` users with no sections get a "contact Mr. Seibel" landing
-      page instead of an empty view
+- [x] `@berkeley.net` users with no sections still get the app — the staff
+      directory, with the Mine/Shared links and menu boxes hidden; only a
+      Mine or student-study deep link shows them a "contact Mr. Seibel"
+      landing page
 
 ## Home and navigation
 
-- [x] A top navbar (Home / Mine / Shared) appears on every page; admins also get
+- [x] A top navbar (Home / Mine / Shared / Staff) appears on every page (Mine
+      and Shared are hidden for viewers with no sections); admins also get
       the impersonation controls (view-as, "back to me") there
 
 - [x] A "?" in the navbar opens a help overlay explaining Mine vs. Shared and
       the Learn / Review / Browse modes, with device-appropriate instructions
       (tap/swipe vs. keys); closed by its ×, clicking the backdrop, or Escape
 
-- [x] Home page is a menu with two choices: "Learn students' names" (the class
-      face grids, at `?learn`) and "See shared students" (`?shared`), plus a QR
-      code to the app URL for opening it on a phone
+- [x] Home page is a menu with three choices: "Learn students' names" (the
+      class face grids, at `?learn`), "See shared students" (`?shared`), and
+      "Learn staff names" (`?staff`), plus a QR code to the app URL for
+      opening it on a phone
 
 - [x] `?learn` shows the teacher's classes as grids of student photo cards
 
@@ -89,7 +93,41 @@ live; unchecked items are planned.
       (period, class, teacher, across all their teachers) — swiping or arrow
       keys to move between students
 
-- [x] Study scope is one class or all of the teacher's students
+- [x] Study scope is one class, all of the teacher's students, a custom list,
+      or the staff directory
+
+- [x] A progress bar (retired cards / total) sits at the bottom of Learn and
+      Review sessions, with a Start over button that discards the deck's
+      saved progress
+
+- [x] Learn/Review progress is saved per deck (in the browser), so a session
+      can be left and resumed later — cards already retired stay retired
+
+## Custom lists
+
+- [x] Custom lists (owner-only): the app owner can upload a text file of
+      student numbers (one per line, any students in the roster) — or a TSV
+      with the student number first and extra columns shown on the back of
+      the card — as a named list on the Mine page with its own face grid and
+      Learn / Review / Browse; saving under an existing name replaces that
+      list, and each list has a Delete button (behind an in-page confirm
+      dialog)
+
+- [x] Lines that aren't roster student numbers don't block a save — they're
+      reported inline after saving
+
+## Staff directory
+
+- [x] The Staff page shows the BHS staff directory (scraped from the public
+      site into a `staff` tab) as a face grid with Learn / Review / Browse
+      and a name/role filter that narrows both the grid and the study decks;
+      photos come from the directory's public image URLs (initials box where
+      the directory has only its placeholder)
+
+- [x] Staff cards show the courses each member teaches (joined from the
+      roster by email)
+
+- [x] The viewer's own card is left out of their staff study decks
 
 ## Administration
 
@@ -109,20 +147,22 @@ live; unchecked items are planned.
       by running `refreshPhotoMap` after uploading new images; it also writes a
       `missing photos` tab (personId, studentNumber) of students with no photo
 
-## Planned
+- [x] The staff directory is (re)built by running `refreshStaffDirectory`;
+      when the site's firewall blocks Google's fetch, an admin can upload the
+      page's saved HTML from the Staff view, or scrape locally with
+      `scripts/scrape-staff.mjs`
 
-- [ ] Custom lists (admin-only): an admin can upload a text file of student
-      numbers (one per line, any students in the roster) — or a TSV with the
-      student number first and extra columns shown on the back of the card —
-      as a named list that appears on the Mine page with its own face grid and
-      Learn / Review / Browse, and can be replaced or deleted (see
-      `custom-lists.md`)
+- [x] Staff corrections live in a `staff overrides` sheet tab (per-field:
+      name, role, email, photo, opt-out), merged over the scraped rows so a
+      re-scrape never clobbers an edit; an opted-out member appears nowhere
+      in the app
+
+- [x] An `aliases` sheet tab maps a staff member's Workspace alias email to
+      their roster/login address, so either address works everywhere
+      (course joins, overrides, `?as=`)
+
+## Planned
 
 - [ ] Per-section volunteer access: a teacher can assign a volunteer to a
       specific section, and that volunteer gets a page scoped to just that
       section's grid and learn/review (v2 — see `done/appscript-conversion.md`)
-
-- [ ] Staff section: a Staff entry in the navbar and menu showing the BHS
-      staff directory (scraped from the public site into a `staff` tab) as a
-      face grid with Learn / Review / Browse and a name/role filter; photos
-      link to the directory's public images (see `staff-section.md`)

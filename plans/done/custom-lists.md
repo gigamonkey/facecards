@@ -171,3 +171,16 @@ goal — list-making happens at a desk.
    `extra` column on the `lists` tab (as a JSON array; a hand-edited plain-text
    cell also works, as one line) and rendered one-per-line on the back of the
    card in the grid and study modes.
+
+## Changes to the plan
+
+- **Owner-only, not admin-only** — decision 5's admin gate was later narrowed
+  again (commit 9e05537): `model.lists` is sent only to the app owner, and the
+  write endpoints reject impersonated calls rather than honoring `?as=` (the
+  lists UI is never shown while impersonating anyway).
+
+- **Native dialogs replaced (2026-08-01)** — the delete `confirm()` became an
+  in-page confirm dialog, and all save/delete feedback (skipped-lines report,
+  errors, the couldn't-auto-reload notice) moved from `alert()` to inline
+  status text; the skipped-lines report now holds the post-save reload until
+  an OK click.

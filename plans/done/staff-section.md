@@ -161,3 +161,34 @@ New `js-staff.html` partial, included between `js-shared` and `js-app`:
 3. Client: `js-staff.html` (grid + cards), navbar/menu/dispatch/help.
 4. Filter, URL preloading, CSS for variable aspect ratios, staff deep links.
 5. `DEPLOY.md`.
+
+## Changes to the plan
+
+- **The site firewall blocks Google's fetchers** — bhs.berkeleyschools.net
+  sometimes 403s `UrlFetchApp`, so two fallbacks were added:
+  `uploadStaffDirectory` (an admin uploads the page's saved HTML source from
+  the Staff view) and `scripts/scrape-staff.mjs` (scrape locally to TSV; see
+  DEPLOY.md).
+
+- **`staff overrides` tab** — per-field corrections (`email`, `firstName`,
+  `lastName`, `role`, `photo`, `optOut`), hand-edited in the spreadsheet and
+  merged over the scraped rows in `buildStaffModel()` so a re-scrape never
+  clobbers an edit; a non-empty `optOut` drops the member from every
+  viewer-facing route. (An in-app staff self-edit page was built and then
+  removed in favor of the spreadsheet — commit 624d3ef.)
+
+- **`aliases` tab** — staff whose public-directory email is a Workspace alias
+  of their roster/login address are canonicalized to the primary
+  (`canonicalStaffEmail`) before any join, so both addresses work.
+
+- **Courses on staff cards** — `buildStaffModel()` joins staff to the
+  roster's teachers by email username and shows the distinct courses each
+  teaches.
+
+- **Decision 4 reversed** — the viewer's own card is now excluded from staff
+  study decks (commit 0f26374).
+
+- **No-sections viewers get more than the route** — beyond placing `?staff`
+  before the landing check, viewers with no sections now get the whole app
+  with the Mine/Shared nav links and menu boxes hidden (commit 73ec60a);
+  only Mine/student-study deep links render the landing page.

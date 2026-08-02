@@ -396,16 +396,22 @@
     cursor: pointer;
     white-space: nowrap;
   }
-  /* The card is a fixed width (the photo's native ~172px, so it stays crisp)
-     and both the photo and the revealed info fill it, so the photo doesn't
-     shift when the info appears. */
+  /* The card hugs the photo's native ~172px width but grows to fit the
+     revealed info (up to the study box) so long lines don't wrap. Card and
+     photo are both centered, so the photo doesn't shift when the card widens
+     on reveal. */
   body.view-study .card {
-    width: 172px;
-    max-width: 90vw;
+    width: fit-content;
+    min-width: 172px;
+    max-width: calc(100% - 1em);
   }
-  body.view-study .card img {
-    width: 100%;
+  body.view-study .card img,
+  body.view-study .card .initials,
+  body.view-study .card .loading {
+    width: 172px;
+    max-width: 100%;
     height: auto;
+    margin: 0 auto;
   }
   /* Navbar "?" help button + the overlay it opens. */
   .nav-help {
@@ -774,6 +780,9 @@
       font-size: clamp(16px, 4.5vmin, 22px);
     }
     body.view-study {
+      /* Nearly full width with a slight gutter, so the card (and its
+         unwrapped info lines) can use the whole phone screen. */
+      width: calc(100% - 1em);
       padding-bottom: 2.6em; /* clear the fixed progress bar */
     }
     /* The desktop view-shared box (90% width + 2em padding) squeezes a

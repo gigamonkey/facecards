@@ -11,10 +11,16 @@
     // Teacher name (hidden on mobile via CSS).
     home.appendChild(el('h1', 'teacher-name', model.teacherLast || 'My students'));
 
+    var total = 0;
+    Object.keys(model.classes).forEach(function (slug) {
+      total += model.classes[slug].students.length;
+    });
+    home.appendChild(classHead('All students', total, onStudy, 'all', ''));
+
     Object.keys(model.classes).forEach(function (slug) {
       var c = model.classes[slug];
 
-      home.appendChild(classHead(c.name, onStudy, 'class', slug));
+      home.appendChild(classHead(c.name, c.students.length, onStudy, 'class', slug));
 
       var faces = el('div', 'faces');
       c.students
@@ -29,8 +35,6 @@
         });
       home.appendChild(faces);
     });
-
-    home.appendChild(classHead('All students', onStudy, 'all', ''));
 
     renderLists(home, model, onStudy);
 
@@ -53,7 +57,7 @@
       .forEach(function (slug) {
         var list = lists[slug];
 
-        var head = classHead(list.name, onStudy, 'list', slug);
+        var head = classHead(list.name, list.students.length, onStudy, 'list', slug);
         var status = el('p', 'list-status'); // per-list: delete progress/errors
         head.querySelector('.buttons').appendChild(
           studyLink('Delete', function () {
@@ -74,11 +78,9 @@
         home.appendChild(status);
 
         // A big list's grid would dwarf the classes above it — past 35
-        // students just say how many (the study modes still work on it).
-        if (list.students.length > 35) {
-          home.appendChild(el('p', 'list-count', list.students.length + ' students'));
-          return;
-        }
+        // students show no grid (the count is in the heading and the study
+        // modes still work on it).
+        if (list.students.length > 35) return;
 
         var faces = el('div', 'faces');
         list.students
@@ -235,11 +237,14 @@
     }
   }
 
-  // A class heading with its study-mode buttons — on one row (desktop)
-  // or stacked (mobile), controlled by CSS.
-  function classHead(name, onStudy, scope, id) {
+  // A class heading (name plus a quiet student count, unless count is null)
+  // with its study-mode buttons — on one row (desktop) or stacked (mobile),
+  // controlled by CSS.
+  function classHead(name, count, onStudy, scope, id) {
     var head = el('div', 'class-head');
-    head.appendChild(el('h2', null, name));
+    var h2 = el('h2', null, name);
+    if (count != null) h2.appendChild(el('span', 'head-count', '(' + count + ')'));
+    head.appendChild(h2);
     head.appendChild(buttonsRow(onStudy, scope, id));
     return head;
   }

@@ -45,7 +45,8 @@
       return;
     }
 
-    home.appendChild(classHead('BHS staff', onStudy, 'staff', ''));
+    // No count in the heading — the live "N of M" line under the filter has it.
+    home.appendChild(classHead('BHS staff', null, onStudy, 'staff', ''));
 
     var filter = el('input', 'staff-filter');
     filter.type = 'search';

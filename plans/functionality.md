@@ -163,6 +163,19 @@ live; unchecked items are planned.
 
 ## Planned
 
+- [ ] Counselors see their caseload as per-grade groups ("Grade 9", …) on the
+      Mine page — face grids with Learn / Review / Browse, deep links, and
+      saved progress, just like classes — from a `counselors` sheet tab
+      mapping student numbers to counselor emails (see
+      `counselor-caseloads.md`)
+
+- [ ] Counselors' Shared views count their caseload: `?shared` lists the
+      teachers who teach their advisees (counselors do not appear in
+      teachers' shared overviews)
+
+- [ ] The owner can upload the counselor mapping from the navbar, with the
+      same validate-before-replace guards as the roster upload
+
 - [ ] Per-section volunteer access: a teacher can assign a volunteer to a
       specific section, and that volunteer gets a page scoped to just that
       section's grid and learn/review (v2 — see `done/appscript-conversion.md`)

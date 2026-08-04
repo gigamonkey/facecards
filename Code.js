@@ -1075,11 +1075,18 @@ function uploadRoster(csv, as) {
   // setValues needs a rectangle: pad or trim each row to the header width.
   // Every cell is trimmed of leading/trailing whitespace — exports sometimes
   // carry stray padding, and an invisible space in studentNumber or
-  // teacherEmail would silently break those joins.
+  // teacherEmail would silently break those joins. Grades get their leading
+  // zeros dropped (IC exports "09") here, deliberately, since the plain-text
+  // write below means no cell-format coercion will do it for us.
+  var gradeCol = headers.indexOf('grade');
   var width = headers.length;
   var grid = [headers].concat(rows).map(function (row) {
     var out = [];
-    for (var i = 0; i < width; i++) out.push(String(row[i] == null ? '' : row[i]).trim());
+    for (var i = 0; i < width; i++) {
+      var v = String(row[i] == null ? '' : row[i]).trim();
+      if (i === gradeCol && /^\d+$/.test(v)) v = String(Number(v));
+      out.push(v);
+    }
     return out;
   });
 
@@ -1089,7 +1096,10 @@ function uploadRoster(csv, as) {
     var ss = spreadsheet();
     var sheet = ss.getSheetByName(ROSTERS_SHEET) || ss.insertSheet(ROSTERS_SHEET, 0);
     sheet.clearContents();
-    sheet.getRange(1, 1, grid.length, width).setValues(grid);
+    // Plain-text format first, so setValues stores exactly the strings we
+    // hand it — no typed-input coercion of cells that merely look like a
+    // number or date (a "3-4" room becoming March 4th).
+    sheet.getRange(1, 1, grid.length, width).setNumberFormat('@').setValues(grid);
   } finally {
     lock.releaseLock();
   }

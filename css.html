@@ -709,10 +709,9 @@
   .menu-boxes {
     display: flex;
     gap: 1em;
-    flex-wrap: wrap;
   }
   .menu-box {
-    flex: 1 1 12em;
+    flex: 1 1 0; /* equal widths in one row (stacked on mobile, below) */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -810,6 +809,10 @@
       text-align: center;
       padding: 0.7em 0;
       font-size: clamp(16px, 4.5vmin, 22px);
+    }
+    /* The menu boxes: one per row on a phone — three abreast is too cramped. */
+    .menu-boxes {
+      flex-direction: column;
     }
     body.view-study {
       /* Nearly full width with a slight gutter, so the card (and its

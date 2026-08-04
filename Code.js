@@ -1072,12 +1072,15 @@ function uploadRoster(csv, as) {
     );
   }
 
-  // setValues needs a rectangle; pad or trim each row to the header width.
+  // setValues needs a rectangle: pad or trim each row to the header width.
+  // Every cell is trimmed of leading/trailing whitespace — exports sometimes
+  // carry stray padding, and an invisible space in studentNumber or
+  // teacherEmail would silently break those joins.
   var width = headers.length;
   var grid = [headers].concat(rows).map(function (row) {
-    row = row.slice(0, width);
-    while (row.length < width) row.push('');
-    return row;
+    var out = [];
+    for (var i = 0; i < width; i++) out.push(String(row[i] == null ? '' : row[i]).trim());
+    return out;
   });
 
   var lock = LockService.getScriptLock();

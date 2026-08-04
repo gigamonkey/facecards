@@ -28,9 +28,10 @@ One row per (student, counselor):
   `canonicalStaffEmail` so a Workspace-alias address in the export still
   matches the login address).
 
-- `counselorName` (optional) — "Last, First" like the roster's
-  `teacherName`; used only for the Mine page heading. If absent the heading
-  falls back to "My students".
+- `counselorName` — "Last, First" like the roster's `teacherName`; shown as
+  the counselor's name in teachers' shared views and used for the Mine page
+  heading and `?shared-with=` name matching. Technically optional (username
+  fallback), but the export should include it.
 
 Extra columns are ignored. Like every tab, edits require `clearCaches()` —
 but the upload flow (below) handles that itself.
@@ -40,11 +41,15 @@ but the upload flow (below) handles that itself.
 1. **Read the tab into the data blob.** `COUNSELORS_SHEET = 'counselors'`;
    `readCounselors()` like `readLists()` (`[]` if the tab doesn't exist, so
    nothing changes until the tab is created). In `buildData()`, build
-   `data.caseloads = { username: { name: <counselorName or ''>, students: [nums…] } }`,
-   skipping rows whose number or email is empty. Don't require the number to
-   be in `students` here — filter at model-build time like `listsFor` does.
-   Living inside `buildData` means it's covered by the existing `data` cache
-   entry and `clearCaches()` invariant for free.
+   `data.caseloads = { username: { last, full, students: [nums…] } }` (names
+   parsed from `counselorName` like the roster's `teacherName`; username as
+   the fallback), skipping rows whose number or email is empty, and push the
+   counselor's username onto a new `students[num].counselors` array — the
+   per-student reverse index the shared views walk, parallel to
+   `st.teachers`. Don't require the number to be in `students` here — filter
+   at model-build time like `listsFor` does. Living inside `buildData` means
+   it's covered by the existing `data` cache entry and `clearCaches()`
+   invariant for free.
 
 2. **Fold caseload groups into the model.** In `buildModelUncached()`
    (`Code.js:187`), after the periods loop: if
@@ -62,26 +67,40 @@ but the upload flow (below) handles that itself.
      `period: ''` (see the card tweak below);
 
    - `model.teacherLast`: when the viewer has no `data.teachers` entry, use
-     the caseload's `counselorName` last name (same `fullName`-style parse)
-     so the Mine heading isn't blank.
+     the caseload's `last` (parsed from `counselorName`) so the Mine heading
+     isn't blank.
 
    Everything downstream is automatic: `hasOwn` (`Code.js:72`) counts
    `model.classes`, so counselors get the Mine/Shared chrome and skip the
    landing page; `?mode=learn&scope=class&id=<username>-g9` deep links work;
    per-deck saved progress keys off the slug.
 
-3. **Shared views for counselors.** `buildSharedModelUncached` and
-   `buildSharedOverviewUncached` derive "my students" from
-   `myStudentNums(me)` where `me = data.teachers[username]` — a pure
-   counselor has no such entry and gets nothing. Union the viewer's caseload
-   numbers into that set in both (and don't bail early when `me` is
-   undefined but a caseload exists). This is deliberately asymmetric:
-   counselors see which teachers share (i.e. teach) their advisees, but
-   counselors do NOT appear in teachers' `?shared` overviews — `st.teachers`
-   only contains class teachers, and a counselor "sharing" a whole caseload
-   with every teacher in the school would be noise. Counselors also can't be
-   a `?shared-with=` target (`resolveTeachers` matches `data.teachers`);
-   that's fine.
+3. **Shared views, both directions.** Sharing is symmetric: counselors see
+   which teachers teach their advisees, and teachers see their students'
+   counselors.
+
+   - *Counselor as viewer:* `buildSharedModelUncached` and
+     `buildSharedOverviewUncached` derive "my students" from
+     `myStudentNums(me)` where `me = data.teachers[username]` — a pure
+     counselor has no such entry and gets nothing. Union the viewer's
+     caseload numbers into that set in both (and don't bail early when `me`
+     is undefined but a caseload exists). In the `?shared-with=` table, the
+     "my classes" cell for a caseload-only student is `['Counselor']`, with
+     `minePeriod` a finite sentinel (9999, matching `periodNum`'s fallback)
+     so the sort stays NaN-free.
+
+   - *Teacher as viewer:* in `buildSharedOverviewUncached`, walk
+     `st.counselors` alongside `st.teachers` (`Code.js:336`) and emit
+     counselor entries in the same `teachers` list: name from
+     `data.caseloads`, photo via the existing `staffPhotoByUsername` join
+     (counselors are staff), `courses: ['Counselor']` — the overview client
+     renders whatever `courses` it gets (`js-shared.html:131`), so no client
+     change. The row links to `?shared-with=<counselor>` like any other. For
+     that page to resolve, extend `resolveTeachers` and `teacherNamesFor` to
+     also match caseload holders (email, username, last/full from
+     `counselorName`), match students by `st.counselors`, and render the
+     "their classes" cell as `['Counselor']` with the same 9999 period
+     sentinel.
 
 4. **Owner upload: `uploadCounselors(csv, as)`.** Mirror `uploadRoster`
    (`Code.js:1022`): owner-only gate, delimiter sniffed from the header
@@ -130,7 +149,11 @@ photo loading all treat the grade groups as ordinary classes.
 Seed the tab with a handful of rows for a test counselor email, then
 `?as=<counselor>` as an admin: menu shows all three boxes; Mine shows the
 grade grids; Learn/Review/Browse work per grade and for "All students";
-browse shows schedules; `?shared` lists the advisees' teachers; a teacher's
-own views are unchanged. Then upload a real export through the new button
+browse shows schedules; `?shared` lists the advisees' teachers. Then
+`?as=` a teacher of one of those advisees: their `?shared` overview shows
+the counselor (photo, name, "Counselor", count), and its link opens a
+`?shared-with=` table of the students they share, sorted sanely. Views of a
+teacher with no seeded advisees are unchanged. Then upload a real export
+through the new button
 and re-check, plus confirm the guards reject a header-less or truncated
 file. Verify a caseload student with no photo still gets the initials box.

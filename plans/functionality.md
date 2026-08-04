@@ -169,9 +169,10 @@ live; unchecked items are planned.
       mapping student numbers to counselor emails (see
       `counselor-caseloads.md`)
 
-- [ ] Counselors' Shared views count their caseload: `?shared` lists the
-      teachers who teach their advisees (counselors do not appear in
-      teachers' shared overviews)
+- [ ] Sharing works both ways for caseloads: a counselor's `?shared` lists
+      the teachers who teach their advisees, and a teacher's `?shared` lists
+      their students' counselors (labeled "Counselor", linking to the same
+      shared-with table)
 
 - [ ] The owner can upload the counselor mapping from the navbar, with the
       same validate-before-replace guards as the roster upload

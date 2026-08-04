@@ -12,8 +12,9 @@ up and the operational chores.
 
 - **`counselor-caseloads.md`** — give counselors their students: a new
   `counselors` sheet tab (studentNumber → counselorEmail), caseloads folded
-  into `model.classes` as per-grade groups, shared views extended to count
-  caseload students, and an owner upload mirroring the roster one.
+  into `model.classes` as per-grade groups, shared views made symmetric
+  (counselors see their advisees' teachers; teachers see their students'
+  counselors), and an owner upload mirroring the roster one.
 
 ## Loose ends
 

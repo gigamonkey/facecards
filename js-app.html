@@ -12,6 +12,49 @@
     var banner = document.getElementById('banner');
     var teardownStudy = null;
 
+    // The owner's navbar upload buttons and their modals (openUpload /
+    // buildUploadOverlay, below): one entry per uploadable tab. Defined
+    // before renderBanner() runs, since it builds a button per entry.
+    var UPLOADS = {
+      roster: {
+        label: 'Roster',
+        title: 'Replace the roster',
+        hint:
+          'Upload a fresh roster export (.csv or .tsv). It replaces everything in ' +
+          'the rosters tab, so it must be the complete roster — every teacher’s ' +
+          'sections — with the usual header row (studentNumber, firstName, ' +
+          'lastName, period, course, teacherEmail, teacherName, …).',
+        button: 'Replace roster',
+        endpoint: 'uploadRoster',
+        describe: function (result) {
+          return (
+            'Loaded ' + result.rows + ' rows: ' + result.students + ' students across ' +
+            result.teachers + ' teachers — '
+          );
+        },
+      },
+      counselors: {
+        label: 'Counselors',
+        title: 'Replace the counselor mapping',
+        hint:
+          'Upload a fresh counselor export (.csv or .tsv). It replaces everything ' +
+          'in the counselors tab, so it must be the complete mapping — every ' +
+          'student’s counselor — with a header row including studentNumber and ' +
+          'counselorEmail (plus counselorName, “Last, First”, if you have it).',
+        button: 'Replace counselors',
+        endpoint: 'uploadCounselors',
+        describe: function (result) {
+          return (
+            'Loaded ' + result.rows + ' rows across ' + result.counselors + ' counselors' +
+            (result.unmatched
+              ? ' (' + result.unmatched + ' rows matched no roster student)'
+              : '') +
+            ' — '
+          );
+        },
+      },
+    };
+
     var helpOverlay = buildHelpOverlay();
     document.body.appendChild(helpOverlay);
 
@@ -312,13 +355,18 @@
       help.addEventListener('click', openHelp);
       banner.appendChild(help);
 
-      // Owner-only: replace the roster from a CSV export.
+      // Owner-only: replace the roster / counselor mapping from a CSV export.
       if (CTX.isOwner) {
-        var roster = el('button', 'nav-roster', 'Roster');
-        roster.type = 'button';
-        roster.setAttribute('aria-label', 'Replace the roster');
-        roster.addEventListener('click', openRosterUpload);
-        banner.appendChild(roster);
+        Object.keys(UPLOADS).forEach(function (kind) {
+          var cfg = UPLOADS[kind];
+          var btn = el('button', 'nav-roster', cfg.label);
+          btn.type = 'button';
+          btn.setAttribute('aria-label', cfg.title);
+          btn.addEventListener('click', function () {
+            openUpload(kind);
+          });
+          banner.appendChild(btn);
+        });
       }
 
       // Impersonation notice — admins viewing as someone else.
@@ -363,20 +411,22 @@
       return a;
     }
 
-    // Owner-only: the navbar Roster button opens a modal for uploading a
-    // fresh roster export, which replaces the whole `rosters` tab server-side
-    // (uploadRoster — it validates before touching the tab). Built lazily on
-    // first open; only the owner ever gets the button.
-    var rosterOverlay = null;
-    function openRosterUpload() {
-      if (!rosterOverlay) {
-        rosterOverlay = buildRosterOverlay();
-        document.body.appendChild(rosterOverlay);
+    // Owner-only: the navbar Roster / Counselors buttons open a modal for
+    // uploading a fresh export, which replaces the corresponding tab
+    // server-side (uploadRoster / uploadCounselors — both validate before
+    // touching the tab). Built lazily on first open; only the owner ever
+    // gets the buttons. (The UPLOADS configs live near the top of this file
+    // because renderBanner reads them at startup.)
+    var uploadOverlays = {};
+    function openUpload(kind) {
+      if (!uploadOverlays[kind]) {
+        uploadOverlays[kind] = buildUploadOverlay(UPLOADS[kind]);
+        document.body.appendChild(uploadOverlays[kind]);
       }
-      rosterOverlay.classList.add('show');
+      uploadOverlays[kind].classList.add('show');
     }
 
-    function buildRosterOverlay() {
+    function buildUploadOverlay(cfg) {
       // Reuses the help overlay's chrome (and thereby helpOpen()'s guard, so
       // keys and taps aimed at the modal can't drive a study session behind it).
       var overlay = el('div', 'help-overlay');
@@ -395,17 +445,8 @@
         overlay.classList.remove('show');
       });
       box.appendChild(close);
-      box.appendChild(el('h2', null, 'Replace the roster'));
-      box.appendChild(
-        el(
-          'p',
-          'hint',
-          'Upload a fresh roster export (.csv or .tsv). It replaces everything in ' +
-            'the rosters tab, so it must be the complete roster — every teacher’s ' +
-            'sections — with the usual header row (studentNumber, firstName, ' +
-            'lastName, period, course, teacherEmail, teacherName, …).',
-        ),
-      );
+      box.appendChild(el('h2', null, cfg.title));
+      box.appendChild(el('p', 'hint', cfg.hint));
 
       var form = el('form');
       var file = el('input');
@@ -413,7 +454,7 @@
       file.accept = '.csv,.tsv,text/csv,text/tab-separated-values';
       form.appendChild(file);
 
-      var button = el('button', null, 'Replace roster');
+      var button = el('button', null, cfg.button);
       button.type = 'submit';
       form.appendChild(button);
       box.appendChild(form);
@@ -434,10 +475,7 @@
             button.disabled = false;
             // In place, no navigation (the sandbox blocks non-gesture
             // navigation) — the reload link is a real click.
-            setStatus(
-              'Loaded ' + result.rows + ' rows: ' + result.students + ' students across ' +
-                result.teachers + ' teachers — ',
-            );
+            setStatus(cfg.describe(result));
             var a = el('a', null, 'reload');
             a.href = appUrl('');
             if (CTX.baseUrl) a.target = '_top';
@@ -448,13 +486,13 @@
             button.disabled = false;
             setStatus(err.message, true);
           })
-          .uploadRoster(text, asParam());
+          [cfg.endpoint](text, asParam());
       }
 
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!(file.files && file.files.length)) {
-          setStatus('Choose a roster export first.', true);
+          setStatus('Choose an export file first.', true);
           return;
         }
         var reader = new FileReader();

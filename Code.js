@@ -16,6 +16,10 @@
  *   - `aliases` tab : primary (IC/roster) email in the first column, alias in
  *                  the second — for staff whose public-directory email is an
  *                  alias of their login/roster address
+ *   - `counselors` tab : one row per student/counselor pairing (headers
+ *                  studentNumber, counselorEmail, and optionally
+ *                  counselorName) — counselors' caseloads, since the roster
+ *                  is class-based and doesn't include them
  *
  * Photos are surfaced as drive.google.com/thumbnail URLs from the folder named
  * by CONFIG.DRIVE_FOLDER_ID (shared view-only with the domain).
@@ -32,6 +36,7 @@ var PHOTOS_SHEET = 'photos';
 var ADMINS_SHEET = 'admins';
 var MISSING_PHOTOS_SHEET = 'missing photos';
 var LISTS_SHEET = 'lists';
+var COUNSELORS_SHEET = 'counselors';
 var STAFF_SHEET = 'staff';
 var STAFF_OVERRIDES_SHEET = 'staff overrides';
 var ALIASES_SHEET = 'aliases';
@@ -209,8 +214,45 @@ function buildModelUncached(email) {
       };
     });
   }
+
+  // A counselor's caseload, as one class-like group per grade: the same shape
+  // as a class, so the grids, study modes, deep links, and saved progress all
+  // treat it as one. Groups come after any real classes, in grade order. The
+  // '-g' slugs can't collide with the class slugs, which use '-p' + period.
+  var teacherLast = teacher ? teacher.last : '';
+  var caseload = (data.caseloads || {})[username(email)];
+  if (caseload) {
+    if (!teacherLast) teacherLast = caseload.last;
+    var byGrade = {};
+    caseload.students.forEach(function (num) {
+      if (!data.students[num]) return; // not in the roster -- nothing to show
+      var grade = String(data.students[num].grade || '');
+      (byGrade[grade] = byGrade[grade] || []).push(num);
+    });
+    Object.keys(byGrade)
+      .sort(function (a, b) {
+        return periodNum(a) - periodNum(b) || cmpStr(a, b); // empty grade last
+      })
+      .forEach(function (grade) {
+        var slug = slugify(username(email) + '-g' + (grade || 'none'));
+        classes[slug] = {
+          slug: slug,
+          name: grade ? 'Grade ' + grade : 'No grade',
+          period: '',
+          teacherLast: teacherLast,
+          students: byGrade[grade].map(function (num) {
+            var o = studentBase(data, num);
+            o.course = ''; // no class line on the card back
+            o.period = '';
+            o.schedule = scheduleFor(data, num); // full schedule, for browse mode
+            return o;
+          }),
+        };
+      });
+  }
+
   return {
-    teacherLast: teacher ? teacher.last : '',
+    teacherLast: teacherLast,
     classes: classes,
     lists: listsFor(data, email),
   };
@@ -256,39 +298,70 @@ function buildSharedModel(currentEmail, param) {
 
 function buildSharedModelUncached(currentEmail, param) {
   var data = getData();
-  var me = data.teachers[username(currentEmail)];
+  var user = username(currentEmail);
+  var me = data.teachers[user];
+  var myCaseload = (data.caseloads || {})[user];
 
   var others = resolveTeachers(data, param).filter(function (k) {
-    return k !== username(currentEmail);
+    return k !== user;
   });
-  if (!me || !others.length) {
+  if ((!me && !myCaseload) || !others.length) {
     return { resolved: false, param: param };
   }
 
+  // "My students": class students plus any caseload. A caseload entry has no
+  // period, so its class cell reads "Counselor" and sorts last (9999, the
+  // same sentinel periodNum uses for non-numeric periods).
+  var mine = me ? myStudentNums(me) : {};
+  if (myCaseload) {
+    myCaseload.students.forEach(function (num) {
+      mine[num] = true;
+    });
+  }
+
   var students = [];
-  Object.keys(myStudentNums(me)).forEach(function (num) {
+  Object.keys(mine).forEach(function (num) {
     var st = data.students[num];
     if (!st) return;
+    // (st.counselors || []): tolerate a data blob cached before the
+    // counselors tab existed, until clearCaches() rebuilds it.
     var matched = others.filter(function (k) {
-      return st.teachers.indexOf(k) !== -1;
+      return st.teachers.indexOf(k) !== -1 || (st.counselors || []).indexOf(k) !== -1;
     });
     if (!matched.length) return;
 
-    var mine = teacherClassesFor(me, num);
+    var mineNames = [];
+    var minePeriod = Infinity;
+    if (me) {
+      var mc = teacherClassesFor(me, num);
+      mineNames = mc.names;
+      minePeriod = mc.minPeriod;
+    }
+    if (myCaseload && myCaseload.students.indexOf(num) !== -1) {
+      mineNames = mineNames.concat('Counselor');
+      minePeriod = Math.min(minePeriod, 9999);
+    }
+
     var otherNames = [];
     var otherPeriods = [];
     matched.forEach(function (k) {
-      var c = teacherClassesFor(data.teachers[k], num);
-      c.names.forEach(function (n) {
-        if (otherNames.indexOf(n) === -1) otherNames.push(n);
-      });
-      otherPeriods.push(c.minPeriod);
+      if (st.teachers.indexOf(k) !== -1) {
+        var c = teacherClassesFor(data.teachers[k], num);
+        c.names.forEach(function (n) {
+          if (otherNames.indexOf(n) === -1) otherNames.push(n);
+        });
+        otherPeriods.push(c.minPeriod);
+      }
+      if ((st.counselors || []).indexOf(k) !== -1) {
+        if (otherNames.indexOf('Counselor') === -1) otherNames.push('Counselor');
+        otherPeriods.push(9999);
+      }
     });
 
     var base = studentBase(data, num);
-    base.mine = mine.names;
+    base.mine = mineNames;
     base.other = otherNames.sort(cmpStr);
-    base.minePeriod = mine.minPeriod;
+    base.minePeriod = minePeriod;
     base.otherPeriod = Math.min.apply(null, otherPeriods);
     students.push(base);
   });
@@ -305,8 +378,8 @@ function buildSharedModelUncached(currentEmail, param) {
   var them = teacherNamesFor(data, others);
   return {
     resolved: true,
-    meLast: me.last,
-    meFull: me.full,
+    meLast: me ? me.last : myCaseload.last,
+    meFull: me ? me.full : myCaseload.full,
     otherLast: them.last || String(param),
     otherFull: them.full || String(param),
     students: students,
@@ -321,27 +394,45 @@ function buildSharedOverview(currentEmail) {
 
 function buildSharedOverviewUncached(currentEmail) {
   var data = getData();
-  var me = data.teachers[username(currentEmail)];
-  if (!me) return { teachers: [] };
+  var user = username(currentEmail);
+  var me = data.teachers[user];
+  var myCaseload = (data.caseloads || {})[user];
+  if (!me && !myCaseload) return { teachers: [] };
 
   var staffPhotos = staffPhotoByUsername();
 
-  var mine = myStudentNums(me);
+  var mine = me ? myStudentNums(me) : {};
+  if (myCaseload) {
+    myCaseload.students.forEach(function (num) {
+      mine[num] = true;
+    });
+  }
 
-  // other username -> [shared student numbers]
+  // other username -> [shared student numbers]; counselors of my students
+  // count as sharing them too (isCounselor marks the ones matched that way,
+  // so their row can say "Counselor").
   var byTeacher = {};
+  var isCounselor = {};
+  function share(other, num) {
+    if (other === user) return;
+    var nums = (byTeacher[other] = byTeacher[other] || []);
+    if (nums.indexOf(num) === -1) nums.push(num);
+  }
   Object.keys(mine).forEach(function (num) {
     var st = data.students[num];
     if (!st) return;
     st.teachers.forEach(function (other) {
-      if (other !== username(currentEmail)) {
-        (byTeacher[other] = byTeacher[other] || []).push(num);
-      }
+      share(other, num);
+    });
+    (st.counselors || []).forEach(function (other) {
+      isCounselor[other] = true;
+      share(other, num);
     });
   });
 
   var teachers = Object.keys(byTeacher).map(function (other) {
     var ot = data.teachers[other];
+    var cl = (data.caseloads || {})[other];
     var nums = byTeacher[other];
 
     var students = nums
@@ -355,12 +446,15 @@ function buildSharedOverviewUncached(currentEmail) {
         );
       });
 
+    var courses = ot ? teacherCourses(ot) : []; // everything they teach, not just shared
+    if (isCounselor[other]) courses = courses.concat('Counselor');
+
     return {
       key: other,
-      last: ot.last,
-      full: ot.full,
+      last: ot ? ot.last : cl.last,
+      full: ot ? ot.full : cl.full,
       photoUrl: staffPhotos[other] || '', // the overview row's photo
-      courses: teacherCourses(ot), // everything they teach, not just shared
+      courses: courses,
       students: students,
     };
   });
@@ -458,14 +552,15 @@ function teacherClassesFor(teacher, num) {
   return { names: names.sort(cmpStr), minPeriod: minP };
 }
 
-// Resolve a ?shared-with= value to teacher usernames: match by username, last
-// name, full name, or email (bare usernames get @berkeley.net appended).
+// Resolve a ?shared-with= value to teacher (or counselor) usernames: match by
+// username, last name, full name, or email (bare usernames get @berkeley.net
+// appended). Teachers and caseload holders share the {email, last, full}
+// shape, so both match the same way.
 function resolveTeachers(data, param) {
   var raw = normalizeEmail(param);
   var qualified = qualifyEmail(param);
   var out = [];
-  Object.keys(data.teachers).forEach(function (u) {
-    var t = data.teachers[u];
+  function tryMatch(u, t) {
     if (
       t.email === qualified ||
       t.email === raw ||
@@ -473,18 +568,25 @@ function resolveTeachers(data, param) {
       String(t.last || '').toLowerCase() === raw ||
       String(t.full || '').toLowerCase() === raw
     ) {
-      out.push(u);
+      if (out.indexOf(u) === -1) out.push(u);
     }
+  }
+  Object.keys(data.teachers).forEach(function (u) {
+    tryMatch(u, data.teachers[u]);
+  });
+  Object.keys(data.caseloads || {}).forEach(function (u) {
+    tryMatch(u, data.caseloads[u]);
   });
   return out;
 }
 
-// Distinct last name(s) and full name(s) for a set of teacher usernames.
+// Distinct last name(s) and full name(s) for a set of teacher/counselor
+// usernames.
 function teacherNamesFor(data, usernames) {
   var lasts = [];
   var fulls = [];
   usernames.forEach(function (u) {
-    var t = data.teachers[u];
+    var t = data.teachers[u] || (data.caseloads || {})[u];
     if (!t) return;
     if (t.last && lasts.indexOf(t.last) === -1) lasts.push(t.last);
     if (t.full && fulls.indexOf(t.full) === -1) fulls.push(t.full);
@@ -1004,7 +1106,7 @@ function rewriteLists(email, name, entries) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Roster upload (owner-only)                                          */
+/* Roster and counselor uploads (owner-only)                           */
 /* ------------------------------------------------------------------ */
 
 /**
@@ -1114,6 +1216,100 @@ function uploadRoster(csv, as) {
   };
 }
 
+/**
+ * Replace the entire `counselors` tab with an uploaded export — CSV or TSV,
+ * the delimiter sniffed from the header line. Same shape and gate as
+ * uploadRoster, scaled to the caseload mapping: the header row must include
+ * studentNumber and counselorEmail (counselorName is used when present), and
+ * the file must hold at least a thousand plausible rows — every student has
+ * a counselor, so a real export has thousands. Reports how many rows matched
+ * no roster student, so a mismatched export is visible immediately.
+ */
+function uploadCounselors(csv, as) {
+  var viewer = resolveViewer(as);
+  if (!viewer || !isOwner(viewer.actual) || viewer.impersonating) {
+    throw new Error('Not authorized.');
+  }
+
+  var text = String(csv || '');
+  var nl = text.indexOf('\n');
+  var headerLine = nl === -1 ? text : text.slice(0, nl);
+  var table = Utilities.parseCsv(text, headerLine.indexOf('\t') === -1 ? ',' : '\t');
+  if (!table.length || table[0].length < 2) {
+    throw new Error('That file doesn\'t look like a counselor export. Tab left untouched.');
+  }
+
+  var headers = table[0].map(function (h) {
+    return String(h).trim();
+  });
+  var required = ['studentNumber', 'counselorEmail'];
+  var missing = required.filter(function (h) {
+    return headers.indexOf(h) === -1;
+  });
+  if (missing.length) {
+    throw new Error(
+      'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ') +
+        ' — is that a counselor export? Tab left untouched.',
+    );
+  }
+
+  var numCol = headers.indexOf('studentNumber');
+  var emailCol = headers.indexOf('counselorEmail');
+  var rows = table.slice(1).filter(function (row) {
+    return row.some(function (c) {
+      return String(c).trim() !== '';
+    });
+  });
+  var valid = rows.filter(function (row) {
+    return /^\d+$/.test(String(row[numCol]).trim()) && isEmailShaped(qualifyEmail(row[emailCol]));
+  }).length;
+  if (valid < 1000) {
+    throw new Error(
+      'Only ' + valid + ' rows have a student number and counselor email — a full export ' +
+        'has one row per student, thousands of them. Tab left untouched.',
+    );
+  }
+
+  // setValues needs a rectangle: pad or trim each row to the header width,
+  // trimming every cell (see uploadRoster).
+  var width = headers.length;
+  var grid = [headers].concat(rows).map(function (row) {
+    var out = [];
+    for (var i = 0; i < width; i++) {
+      out.push(String(row[i] == null ? '' : row[i]).trim());
+    }
+    return out;
+  });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var ss = spreadsheet();
+    var sheet = ss.getSheetByName(COUNSELORS_SHEET) || ss.insertSheet(COUNSELORS_SHEET);
+    sheet.clearContents();
+    // Plain-text format first, so setValues stores exactly the strings we
+    // hand it (see uploadRoster).
+    sheet.getRange(1, 1, grid.length, width).setNumberFormat('@').setValues(grid);
+  } finally {
+    lock.releaseLock();
+  }
+  Logger.log('Wrote ' + rows.length + ' caseload rows to the "' + COUNSELORS_SHEET + '" tab.');
+
+  clearCaches(); // every cached model is stale now
+  var data = getData(); // rebuild the blob under the new version while we're here
+
+  var unmatched = 0;
+  rows.forEach(function (row) {
+    var num = String(row[numCol]).trim();
+    if (num && !data.students[num]) unmatched++;
+  });
+  return {
+    rows: rows.length,
+    counselors: Object.keys(data.caseloads).length,
+    unmatched: unmatched,
+  };
+}
+
 /* ------------------------------------------------------------------ */
 /* Spreadsheet helpers                                                 */
 /* ------------------------------------------------------------------ */
@@ -1157,6 +1353,16 @@ function parseExtra(cell) {
 /** All custom-list rows from the `lists` tab ([] until the first list is saved). */
 function readLists() {
   var sheet = spreadsheet().getSheetByName(LISTS_SHEET);
+  return sheet ? sheetToObjects(sheet) : [];
+}
+
+/**
+ * All caseload rows from the `counselors` tab ([] until the tab exists):
+ * studentNumber, counselorEmail, and optionally counselorName ("Last, First"
+ * like the roster's teacherName).
+ */
+function readCounselors() {
+  var sheet = spreadsheet().getSheetByName(COUNSELORS_SHEET);
   return sheet ? sheetToObjects(sheet) : [];
 }
 
@@ -1485,6 +1691,7 @@ function buildData() {
         gender: s.gender,
         fileId: photos[num] || '',
         teachers: [],
+        counselors: [],
       };
     }
     if (students[num].teachers.indexOf(user) === -1) students[num].teachers.push(user);
@@ -1514,15 +1721,42 @@ function buildData() {
     });
   });
 
+  // Counselor caseloads from the `counselors` tab: per-counselor student
+  // lists, plus a per-student reverse index (st.counselors, parallel to
+  // st.teachers) that the shared views walk. Emails are canonicalized through
+  // the aliases tab so an alias address in the export still matches the
+  // login. Numbers not in the roster are kept here and filtered where used.
+  var aliases = readAliases();
+  var caseloads = {};
+  readCounselors().forEach(function (r) {
+    var num = String(r.studentNumber || '').trim();
+    var email = canonicalStaffEmail(qualifyEmail(r.counselorEmail), aliases);
+    if (!num || !isEmailShaped(email)) return;
+    var user = email.replace(/@.*$/, '');
+    if (!caseloads[user]) {
+      caseloads[user] = {
+        email: email,
+        last: String(r.counselorName || '').replace(/,.*$/, '').trim() || user,
+        full: fullName(r.counselorName) || user,
+        students: [],
+      };
+    }
+    if (caseloads[user].students.indexOf(num) === -1) caseloads[user].students.push(num);
+    var st = students[num];
+    if (st && st.counselors.indexOf(user) === -1) st.counselors.push(user);
+  });
+
   logTime(
     'buildData (' +
       Object.keys(students).length +
       ' students, ' +
       Object.keys(teachers).length +
-      ' teachers)',
+      ' teachers, ' +
+      Object.keys(caseloads).length +
+      ' caseloads)',
     t0,
   );
-  return { students: students, teachers: teachers };
+  return { students: students, teachers: teachers, caseloads: caseloads };
 }
 
 /**

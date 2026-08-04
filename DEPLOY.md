@@ -57,6 +57,16 @@ because the app reads it _as_ that account.
 
   Admins can impersonate any user via `?as=` (see §7). Missing/empty tab ⇒ no
   admins.
+- **`counselors` tab (optional) — counselor caseloads.** A tab literally named
+  `counselors`, one row per student/counselor pairing. Row 1 is a header row;
+  the code keys off `studentNumber`, `counselorEmail`, and `counselorName`
+  ("Last, First", like `teacherName` — technically optional, but it's the
+  name teachers see, so include it). Counselors get their caseload as
+  per-grade groups on the Mine page, and sharing counts caseloads in both
+  directions. Easiest to load through the app: the owner's navbar
+  **Counselors** button uploads a CSV/TSV export (validates the headers and a
+  row-count floor before replacing the tab, then clears and rewarms the
+  caches). Hand edits need `clearCaches`. Missing tab ⇒ no counselors.
 - **`photos` tab.** You don't create this by hand — `refreshPhotoMap` generates
   it in §5.
 - **`staff` tab.** Also generated, not hand-made — `refreshStaffDirectory`
@@ -155,9 +165,10 @@ Open the `…/exec` URL and check:
 
 - **New/updated photos:** upload to the folder, then run `refreshPhotoMap` (§5)
   — it also clears the cache, so the changes show up immediately.
-- **Edited the roster or `admins` tab:** run `clearCaches` from the editor so the
-  change appears right away. (Data is cached for up to 6 hours, so without this
-  the edit still takes effect within that window on its own.)
+- **Edited the roster, `counselors`, or `admins` tab:** run `clearCaches` from
+  the editor so the change appears right away. (Data is cached for up to 6
+  hours, so without this the edit still takes effect within that window on its
+  own.) The in-app Roster and Counselors uploads clear the caches themselves.
 - **Staff directory changed** (start of each year at minimum): run
   `refreshStaffDirectory` from the editor. It re-scrapes
   <https://bhs.berkeleyschools.net/staff/> into the `staff` tab and clears the

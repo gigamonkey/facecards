@@ -47,9 +47,11 @@
     back.appendChild(el('p', 'name', nameText));
     back.appendChild(el('p', null, (s.firstName || '') + ' ' + (s.lastName || '')));
     back.appendChild(el('p', null, (s.grade || '') + ' / ' + (s.gender || '')));
-    if (!opts.hideClass) {
-      var period = 'Period ' + (s.period || '');
-      back.appendChild(el('p', null, s.course ? s.course + ' - ' + period : period));
+    // Caseload students have no course or period at all — no class line then.
+    if (!opts.hideClass && (s.course || s.period)) {
+      var period = s.period ? 'Period ' + s.period : '';
+      var line = [s.course, period].filter(Boolean).join(' - ');
+      back.appendChild(el('p', null, line));
     }
     // Custom-list students can carry extra lines (the spare TSV columns).
     (s.extra || []).forEach(function (line) {

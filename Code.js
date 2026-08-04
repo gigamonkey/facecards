@@ -80,6 +80,10 @@ function doGet(e) {
     effective: viewer.effective,
     impersonating: viewer.impersonating,
     isAdmin: viewer.isAdmin,
+    // The navbar's roster-upload button is owner chrome: hidden while
+    // impersonating, like the custom lists (and uploadRoster rejects an
+    // impersonated call anyway).
+    isOwner: isOwner(viewer.actual) && !viewer.impersonating,
     hasOwn: hasOwn,
     baseUrl: baseUrl,
   };
@@ -997,6 +1001,104 @@ function rewriteLists(email, name, entries) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Roster upload (owner-only)                                          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Replace the entire `rosters` tab with an uploaded export — CSV or TSV, the
+ * delimiter sniffed from the header line. The header row must include the
+ * columns the app reads; extra columns are kept as-is. Two guards, both
+ * throwing before the tab is touched (a wrong or truncated file must not
+ * empty the roster for every teacher): the required headers must be present,
+ * and the file must hold thousands of plausible student rows — a real
+ * roster export has tens of thousands. Called via google.script.run from the
+ * navbar's Roster button; owner-only with the same gate as saveList. Clears
+ * and rewarms the caches before returning, so no viewer sees the stale
+ * roster or pays the cold rebuild.
+ */
+function uploadRoster(csv, as) {
+  var viewer = resolveViewer(as);
+  if (!viewer || !isOwner(viewer.actual) || viewer.impersonating) {
+    throw new Error('Not authorized.');
+  }
+
+  var text = String(csv || '');
+  var nl = text.indexOf('\n');
+  var headerLine = nl === -1 ? text : text.slice(0, nl);
+  var table = Utilities.parseCsv(text, headerLine.indexOf('\t') === -1 ? ',' : '\t');
+  if (!table.length || table[0].length < 2) {
+    throw new Error('That file doesn\'t look like a roster export. Tab left untouched.');
+  }
+
+  var headers = table[0].map(function (h) {
+    return String(h).trim();
+  });
+  var required = [
+    'studentNumber',
+    'firstName',
+    'lastName',
+    'period',
+    'course',
+    'teacherEmail',
+    'teacherName',
+  ];
+  var missing = required.filter(function (h) {
+    return headers.indexOf(h) === -1;
+  });
+  if (missing.length) {
+    throw new Error(
+      'Missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', ') +
+        ' — is that a roster export? Tab left untouched.',
+    );
+  }
+
+  var numCol = headers.indexOf('studentNumber');
+  var emailCol = headers.indexOf('teacherEmail');
+  var rows = table.slice(1).filter(function (row) {
+    return row.some(function (c) {
+      return String(c).trim() !== '';
+    });
+  });
+  var valid = rows.filter(function (row) {
+    return /^\d+$/.test(String(row[numCol]).trim()) && isEmailShaped(qualifyEmail(row[emailCol]));
+  }).length;
+  if (valid < 1000) {
+    throw new Error(
+      'Only ' + valid + ' rows have a student number and teacher email — a full roster ' +
+        'export has tens of thousands. Tab left untouched.',
+    );
+  }
+
+  // setValues needs a rectangle; pad or trim each row to the header width.
+  var width = headers.length;
+  var grid = [headers].concat(rows).map(function (row) {
+    row = row.slice(0, width);
+    while (row.length < width) row.push('');
+    return row;
+  });
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    var ss = spreadsheet();
+    var sheet = ss.getSheetByName(ROSTERS_SHEET) || ss.insertSheet(ROSTERS_SHEET, 0);
+    sheet.clearContents();
+    sheet.getRange(1, 1, grid.length, width).setValues(grid);
+  } finally {
+    lock.releaseLock();
+  }
+  Logger.log('Wrote ' + rows.length + ' roster rows to the "' + ROSTERS_SHEET + '" tab.');
+
+  clearCaches(); // every cached model is stale now
+  var data = getData(); // rebuild the blob under the new version while we're here
+  return {
+    rows: rows.length,
+    students: Object.keys(data.students).length,
+    teachers: Object.keys(data.teachers).length,
+  };
 }
 
 /* ------------------------------------------------------------------ */

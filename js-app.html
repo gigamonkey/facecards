@@ -312,6 +312,15 @@
       help.addEventListener('click', openHelp);
       banner.appendChild(help);
 
+      // Owner-only: replace the roster from a CSV export.
+      if (CTX.isOwner) {
+        var roster = el('button', 'nav-roster', 'Roster');
+        roster.type = 'button';
+        roster.setAttribute('aria-label', 'Replace the roster');
+        roster.addEventListener('click', openRosterUpload);
+        banner.appendChild(roster);
+      }
+
       // Impersonation notice — admins viewing as someone else.
       if (CTX.impersonating) {
         banner.appendChild(el('span', 'nav-note', 'as ' + CTX.effective.replace(/@berkeley\.net$/, '')));
@@ -352,6 +361,114 @@
       a.href = href || '#';
       if (CTX.baseUrl) a.target = '_top';
       return a;
+    }
+
+    // Owner-only: the navbar Roster button opens a modal for uploading a
+    // fresh roster export, which replaces the whole `rosters` tab server-side
+    // (uploadRoster — it validates before touching the tab). Built lazily on
+    // first open; only the owner ever gets the button.
+    var rosterOverlay = null;
+    function openRosterUpload() {
+      if (!rosterOverlay) {
+        rosterOverlay = buildRosterOverlay();
+        document.body.appendChild(rosterOverlay);
+      }
+      rosterOverlay.classList.add('show');
+    }
+
+    function buildRosterOverlay() {
+      // Reuses the help overlay's chrome (and thereby helpOpen()'s guard, so
+      // keys and taps aimed at the modal can't drive a study session behind it).
+      var overlay = el('div', 'help-overlay');
+      overlay.addEventListener('click', function (e) {
+        if (e.target === overlay) overlay.classList.remove('show');
+      });
+      window.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') overlay.classList.remove('show');
+      });
+
+      var box = el('div', 'help-box roster-box');
+      var close = el('button', 'help-close', '×');
+      close.type = 'button';
+      close.setAttribute('aria-label', 'Close');
+      close.addEventListener('click', function () {
+        overlay.classList.remove('show');
+      });
+      box.appendChild(close);
+      box.appendChild(el('h2', null, 'Replace the roster'));
+      box.appendChild(
+        el(
+          'p',
+          'hint',
+          'Upload a fresh roster export (.csv or .tsv). It replaces everything in ' +
+            'the rosters tab, so it must be the complete roster — every teacher’s ' +
+            'sections — with the usual header row (studentNumber, firstName, ' +
+            'lastName, period, course, teacherEmail, teacherName, …).',
+        ),
+      );
+
+      var form = el('form');
+      var file = el('input');
+      file.type = 'file';
+      file.accept = '.csv,.tsv,text/csv,text/tab-separated-values';
+      form.appendChild(file);
+
+      var button = el('button', null, 'Replace roster');
+      button.type = 'submit';
+      form.appendChild(button);
+      box.appendChild(form);
+
+      var status = el('p', 'staff-status');
+      box.appendChild(status);
+
+      function setStatus(msg, isError) {
+        status.textContent = msg;
+        status.classList.toggle('error', !!isError);
+      }
+
+      function send(text) {
+        button.disabled = true;
+        setStatus('Uploading… (rewrites the tab and rebuilds the caches — can take a minute)');
+        google.script.run
+          .withSuccessHandler(function (result) {
+            button.disabled = false;
+            // In place, no navigation (the sandbox blocks non-gesture
+            // navigation) — the reload link is a real click.
+            setStatus(
+              'Loaded ' + result.rows + ' rows: ' + result.students + ' students across ' +
+                result.teachers + ' teachers — ',
+            );
+            var a = el('a', null, 'reload');
+            a.href = appUrl('');
+            if (CTX.baseUrl) a.target = '_top';
+            status.appendChild(a);
+            status.appendChild(document.createTextNode('.'));
+          })
+          .withFailureHandler(function (err) {
+            button.disabled = false;
+            setStatus(err.message, true);
+          })
+          .uploadRoster(text, asParam());
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!(file.files && file.files.length)) {
+          setStatus('Choose a roster export first.', true);
+          return;
+        }
+        var reader = new FileReader();
+        reader.onload = function () {
+          send(String(reader.result));
+        };
+        reader.onerror = function () {
+          setStatus('Could not read that file.', true);
+        };
+        reader.readAsText(file.files[0]);
+      });
+
+      overlay.appendChild(box);
+      return overlay;
     }
 
     // A modal explaining how to study; opened by the navbar "?", closed by its ×

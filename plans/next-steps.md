@@ -4,25 +4,34 @@ Facecards is live as a Google Apps Script web app (see
 `done/appscript-conversion.md`), managed with `hug`/`clasp`. All planned
 sections are built: Mine (class face grids + Learn / Review / Browse), Shared,
 the Staff directory (see `done/staff-section.md`), owner-only custom lists
-(see `done/custom-lists.md`), and study progress that persists across
+(see `done/custom-lists.md`), counselor caseloads (see
+`done/counselor-caseloads.md`), and study progress that persists across
 sessions. CLAUDE.md describes the architecture; DEPLOY.md covers standing it
 up and the operational chores.
 
 ## Remaining plans
 
-- **`counselor-caseloads.md`** — give counselors their students: a new
-  `counselors` sheet tab (studentNumber → counselorEmail), caseloads folded
-  into `model.classes` as per-grade groups, shared views made symmetric
-  (counselors see their advisees' teachers; teachers see their students'
-  counselors), and an owner upload mirroring the roster one.
+None — the plans directory is empty apart from this file and
+`functionality.md`.
 
 ## Loose ends
 
-- **Deploy the 2026-08-01 batch.** Five committed client-only changes await
-  `hug deploy` from the `berkeley.net` account: Review mode deals unseen cards
-  as post-miss spacers, the native confirms are replaced (in-page dialog for
-  list delete, none for Start over), and all alerts are now inline status
-  text. No `clearCaches()` needed — nothing server-side changed.
+- **Deploy the pending batch.** Committed but not deployed: the 2026-08-01
+  client-only changes (Review mode deals unseen cards as post-miss spacers,
+  the native confirms are replaced — in-page dialog for list delete, none
+  for Start over — and all alerts are now inline status text) plus the
+  counselor-caseloads work (server + client). `hug deploy` from the
+  `berkeley.net` account, then load the `counselors` tab: the navbar
+  Counselors button with the real export, or hand-seed rows and run
+  `clearCaches()`. Until the tab has rows, nothing changes for any viewer.
+  Then run the manual test pass in `done/counselor-caseloads.md` (§Testing)
+  — the seeded-tab `?as=` checks and the real-export upload have not been
+  exercised against the live app yet.
+
+- **Counselor copy (optional).** The help overlay and menu still speak of
+  "classes"; caseload grade groups read fine as classes, so only touch the
+  phrasing if it grates in practice (called optional in
+  `done/counselor-caseloads.md`).
 
 - **Remove (or gate) the perf/timing logs.** Diagnosing slow loads left
   `logTime()` calls throughout `Code.js` (`doGet`'s per-step timers, the

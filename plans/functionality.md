@@ -64,6 +64,16 @@ live; unchecked items are planned.
       to their `?shared-with=` page, beside their name, the courses they
       teach, and the shared-student count. The same table on all devices
 
+- [x] Counselors see their caseload as per-grade groups ("Grade 9", …) on the
+      Mine page — face grids with Learn / Review / Browse, deep links, and
+      saved progress, just like classes — from a `counselors` sheet tab
+      mapping student numbers to counselor emails
+
+- [x] Sharing works both ways for caseloads: a counselor's `?shared` lists
+      the teachers who teach their advisees, and a teacher's `?shared` lists
+      their students' counselors (labeled "Counselor", linking to the same
+      shared-with table)
+
 ## Study modes
 
 - [x] One card shown at a time; press a key or tap to reveal the back, then
@@ -133,6 +143,9 @@ live; unchecked items are planned.
 
 - [x] Student roster and section assignments come from a Google Sheet
 
+- [x] The owner can upload the counselor mapping from the navbar, with the
+      same validate-before-replace guards as the roster upload
+
 - [x] Admins (listed in an `admins` sheet tab, editable without redeploying) can
       impersonate any user via `?as=` or a "view as" box, with a banner and a
       "back to my view" link
@@ -162,20 +175,6 @@ live; unchecked items are planned.
       (course joins, overrides, `?as=`)
 
 ## Planned
-
-- [ ] Counselors see their caseload as per-grade groups ("Grade 9", …) on the
-      Mine page — face grids with Learn / Review / Browse, deep links, and
-      saved progress, just like classes — from a `counselors` sheet tab
-      mapping student numbers to counselor emails (see
-      `counselor-caseloads.md`)
-
-- [ ] Sharing works both ways for caseloads: a counselor's `?shared` lists
-      the teachers who teach their advisees, and a teacher's `?shared` lists
-      their students' counselors (labeled "Counselor", linking to the same
-      shared-with table)
-
-- [ ] The owner can upload the counselor mapping from the navbar, with the
-      same validate-before-replace guards as the roster upload
 
 - [ ] Per-section volunteer access: a teacher can assign a volunteer to a
       specific section, and that volunteer gets a page scoped to just that

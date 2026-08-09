@@ -58,7 +58,43 @@
         var list = lists[slug];
 
         var head = classHead(list.name, list.students.length, onStudy, 'list', slug);
-        var status = el('p', 'list-status'); // per-list: delete progress/errors
+        var status = el('div', 'list-status'); // per-list: update/delete progress, errors
+
+        // Update: replace the list's students from a newly picked file (same
+        // format as the add form's upload). The button clicks a hidden file
+        // input; picking a file saves under the list's existing name, which
+        // replaces it.
+        var file = el('input');
+        file.type = 'file';
+        file.accept = '.txt,.tsv,text/plain,text/tab-separated-values';
+        file.style.display = 'none';
+        file.addEventListener('change', function () {
+          if (!file.files || !file.files.length) return;
+          var reader = new FileReader();
+          reader.onload = function () {
+            status.textContent = 'Updating…';
+            google.script.run
+              .withSuccessHandler(function (result) {
+                reportSave(status, list.name, result);
+              })
+              .withFailureHandler(function (err) {
+                status.textContent = err.message;
+              })
+              .saveList(list.name, String(reader.result), asParam());
+          };
+          reader.onerror = function () {
+            status.textContent = 'Could not read that file.';
+          };
+          reader.readAsText(file.files[0]);
+          file.value = ''; // so re-picking the same file fires change again
+        });
+        head.appendChild(file);
+        head.querySelector('.buttons').appendChild(
+          studyLink('Update', function () {
+            file.click();
+          }),
+        );
+
         head.querySelector('.buttons').appendChild(
           studyLink('Delete', function () {
             confirmDialog('Delete the list “' + list.name + '”?', 'Delete', function () {
@@ -152,35 +188,8 @@
       status.textContent = 'Saving…';
       google.script.run
         .withSuccessHandler(function (result) {
-          var skipped = (result.unknown || []).concat(result.invalid || []);
-          if (!skipped.length) {
-            reloadHome(status);
-            return;
-          }
-          // The save landed but some lines didn't: report them inline and
-          // hold the reload (which would wipe the report) until OK is
-          // clicked -- a real gesture, so the sandbox always allows that
-          // navigation.
           save.disabled = false;
-          status.textContent =
-            'Saved ' +
-            result.saved +
-            ' students to “' +
-            listName +
-            '”. Skipped ' +
-            skipped.length +
-            ' lines that aren’t roster student numbers:';
-          var lines = el('ul');
-          skipped.forEach(function (line) {
-            lines.appendChild(el('li', null, line));
-          });
-          status.appendChild(lines);
-          var ok = el('button', null, 'OK');
-          ok.type = 'button';
-          ok.addEventListener('click', function () {
-            reloadHome(status);
-          });
-          status.appendChild(ok);
+          reportSave(status, listName, result);
         })
         .withFailureHandler(function (err) {
           save.disabled = false;
@@ -210,6 +219,37 @@
     wrap.appendChild(form);
     wrap.appendChild(status);
     return wrap;
+  }
+
+  // Handle a saveList result: reload right away on a clean save; when lines
+  // were skipped, report them inline and hold the reload (which would wipe
+  // the report) until OK is clicked -- a real gesture, so the sandbox always
+  // allows that navigation.
+  function reportSave(status, listName, result) {
+    var skipped = (result.unknown || []).concat(result.invalid || []);
+    if (!skipped.length) {
+      reloadHome(status);
+      return;
+    }
+    status.textContent =
+      'Saved ' +
+      result.saved +
+      ' students to “' +
+      listName +
+      '”. Skipped ' +
+      skipped.length +
+      ' lines that aren’t roster student numbers:';
+    var lines = el('ul');
+    skipped.forEach(function (line) {
+      lines.appendChild(el('li', null, line));
+    });
+    status.appendChild(lines);
+    var ok = el('button', null, 'OK');
+    ok.type = 'button';
+    ok.addEventListener('click', function () {
+      reloadHome(status);
+    });
+    status.appendChild(ok);
   }
 
   // The ?as= to pass to the write endpoints (lists, staff overrides) so an

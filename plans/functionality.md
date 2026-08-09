@@ -120,7 +120,8 @@ live; unchecked items are planned.
       with the student number first and extra columns shown on the back of
       the card — as a named list on the Mine page with its own face grid and
       Learn / Review / Browse; saving under an existing name replaces that
-      list, and each list has a Delete button (behind an in-page confirm
+      list, and each list has an Update button (pick a new file to replace
+      the list's students) and a Delete button (behind an in-page confirm
       dialog)
 
 - [x] Lines that aren't roster student numbers don't block a save — they're
